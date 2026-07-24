@@ -106,8 +106,12 @@ export function ConverterDialog({ family, onClose }: Props) {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [previewFor, setPreviewFor] = useState<{ blob: Blob; filename: string } | null>(null);
+  const [zipStructure, setZipStructure] = useState<ZipStructure>("flat");
+  const [historyQuery, setHistoryQuery] = useState("");
   const autoSelectedRef = useRef(false);
+  const cancelRef = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
 
   const perFileOutputs: OutputOption[] = family?.mode === "per-file" ? family.outputs : [];
   const selectedOutput = perFileOutputs[outputIndex];
