@@ -479,6 +479,31 @@ export function ConverterDialog({ family, onClose }: Props) {
     inputRef.current?.click();
   };
 
+  const redownloadFromHistory = async (entry: HistoryEntry) => {
+    const blob = await getBlob(entry.id);
+    if (!blob) return;
+    triggerDownload(blob, entry.outputFilename);
+  };
+
+  const previewFromHistory = async (entry: HistoryEntry) => {
+    const blob = await getBlob(entry.id);
+    if (!blob) return;
+    setPreviewFor({ blob, filename: entry.outputFilename });
+  };
+
+  const filteredHistory = useMemo(() => {
+    const q = historyQuery.trim().toLowerCase();
+    if (!q) return history;
+    return history.filter(
+      (h) =>
+        h.outputFilename.toLowerCase().includes(q) ||
+        h.inputName.toLowerCase().includes(q) ||
+        h.outputExt.toLowerCase().includes(q) ||
+        h.outputLabel.toLowerCase().includes(q),
+    );
+  }, [history, historyQuery]);
+
+
   const isCombine = family.mode === "combine";
   const hasValid = items.some((i) => i.status.kind !== "rejected");
   const isRunning = combineState.kind === "working" || items.some((i) => i.status.kind === "working");
