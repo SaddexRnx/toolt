@@ -44,7 +44,7 @@ export async function makePreview(file: File): Promise<string | null> {
       const blob: Blob = await new Promise((resolve, reject) =>
         canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("preview encode failed"))), "image/png"),
       );
-      doc.destroy();
+      await doc.cleanup();
       return URL.createObjectURL(blob);
     } catch {
       return null;
