@@ -24,14 +24,26 @@ import {
   Eye,
   History as HistoryIcon,
   AlertTriangle,
+  StopCircle,
+  Search,
+  Trash2,
 } from "lucide-react";
 import type { Family, OutputOption } from "@/lib/converters";
 import { isAcceptedFile } from "@/lib/converters";
 import { canPreview, makePreview } from "@/lib/preview";
 import { parsePageRange, validatePageRange } from "@/lib/pdf-range";
-import { loadHistory, saveEntry, removeEntry, type HistoryEntry } from "@/lib/history";
+import {
+  loadHistory,
+  saveEntry,
+  removeEntry,
+  saveBlob,
+  getBlob,
+  type HistoryEntry,
+} from "@/lib/history";
+
 import { OutputPreview } from "@/components/OutputPreview";
 import { cn } from "@/lib/utils";
+
 
 type Props = { family: Family | null; onClose: () => void };
 
@@ -61,6 +73,8 @@ const getExt = (name: string) => {
   return m ? m[1].toUpperCase() : "";
 };
 
+type ZipStructure = "flat" | "subfolders";
+
 function applyNameMode(filename: string, mode: NameMode, suffix: string): string {
   if (mode === "keep") return filename;
   const dot = filename.lastIndexOf(".");
@@ -74,6 +88,12 @@ function applyNameMode(filename: string, mode: NameMode, suffix: string): string
   return `${base}-${s}${ext}`;
 }
 
+const stripExt = (name: string) => {
+  const dot = name.lastIndexOf(".");
+  return dot > 0 ? name.slice(0, dot) : name;
+};
+
+
 export function ConverterDialog({ family, onClose }: Props) {
   const [items, setItems] = useState<QueueItem[]>([]);
   const [dragOver, setDragOver] = useState(false);
@@ -86,8 +106,12 @@ export function ConverterDialog({ family, onClose }: Props) {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [previewFor, setPreviewFor] = useState<{ blob: Blob; filename: string } | null>(null);
+  const [zipStructure, setZipStructure] = useState<ZipStructure>("flat");
+  const [historyQuery, setHistoryQuery] = useState("");
   const autoSelectedRef = useRef(false);
+  const cancelRef = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
 
   const perFileOutputs: OutputOption[] = family?.mode === "per-file" ? family.outputs : [];
   const selectedOutput = perFileOutputs[outputIndex];
@@ -279,7 +303,7 @@ export function ConverterDialog({ family, onClose }: Props) {
     ext: string,
     label: string,
   ) => {
-    saveEntry({
+    const id = saveEntry({
       familyId: family.id,
       familyTitle: family.title,
       category: family.category,
@@ -292,7 +316,9 @@ export function ConverterDialog({ family, onClose }: Props) {
       nameMode,
       nameSuffix: nameMode === "suffix" ? nameSuffix : undefined,
       pageRange: isPdfSplit ? pageRange : undefined,
+      hasBlob: true,
     });
+    void saveBlob(id, result.blob);
   };
 
   const convertOne = async (item: QueueItem) => {
@@ -328,9 +354,29 @@ export function ConverterDialog({ family, onClose }: Props) {
 
   const runPerFile = async () => {
     if (family.mode !== "per-file" || !selectedOutput) return;
+    cancelRef.current = false;
     const pending = items.filter((i) => i.status.kind === "pending" || i.status.kind === "error");
-    for (const item of pending) await convertOne(item);
+    for (const item of pending) {
+      if (cancelRef.current) {
+        // Restore any files that never got processed back to pending
+        setItems((prev) =>
+          prev.map((i) =>
+            i.id === item.id && i.status.kind !== "done" && i.status.kind !== "rejected"
+              ? { ...i, status: { kind: "error", message: "Canceled" } }
+              : i,
+          ),
+        );
+        break;
+      }
+      await convertOne(item);
+    }
+    cancelRef.current = false;
   };
+
+  const cancelBatch = () => {
+    cancelRef.current = true;
+  };
+
 
   const runCombine = async () => {
     if (family.mode !== "combine") return;
@@ -340,7 +386,7 @@ export function ConverterDialog({ family, onClose }: Props) {
     try {
       const { blob, filename } = await family.run(valid);
       setCombineState({ kind: "done", filename, size: blob.size, blob });
-      saveEntry({
+      const id = saveEntry({
         familyId: family.id,
         familyTitle: family.title,
         category: family.category,
@@ -352,11 +398,14 @@ export function ConverterDialog({ family, onClose }: Props) {
         outputSize: blob.size,
         nameMode,
         nameSuffix: nameMode === "suffix" ? nameSuffix : undefined,
+        hasBlob: true,
       });
+      void saveBlob(id, blob);
     } catch (e) {
       setCombineState({ kind: "error", message: e instanceof Error ? e.message : String(e) });
     }
   };
+
 
   const triggerDownload = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
@@ -393,6 +442,10 @@ export function ConverterDialog({ family, onClose }: Props) {
       const seen = new Map<string, number>();
       for (const it of done) {
         let name = applyNameMode(it.status.filename, nameMode, nameSuffix);
+        if (zipStructure === "subfolders") {
+          const folder = stripExt(it.file.name).replace(/[\\/:*?"<>|]+/g, "_") || "file";
+          name = `${folder}/${name}`;
+        }
         const n = seen.get(name) ?? 0;
         if (n > 0) {
           const dot = name.lastIndexOf(".");
@@ -401,6 +454,7 @@ export function ConverterDialog({ family, onClose }: Props) {
         seen.set(name, n + 1);
         zip.file(name, it.status.blob);
       }
+
       const blob = await zip.generateAsync({ type: "blob" }, (meta) => {
         setZipState({ kind: "working", percent: Math.round(meta.percent) });
       });
@@ -424,6 +478,31 @@ export function ConverterDialog({ family, onClose }: Props) {
     if (entry.pageRange) setPageRange(entry.pageRange);
     inputRef.current?.click();
   };
+
+  const redownloadFromHistory = async (entry: HistoryEntry) => {
+    const blob = await getBlob(entry.id);
+    if (!blob) return;
+    triggerDownload(blob, entry.outputFilename);
+  };
+
+  const previewFromHistory = async (entry: HistoryEntry) => {
+    const blob = await getBlob(entry.id);
+    if (!blob) return;
+    setPreviewFor({ blob, filename: entry.outputFilename });
+  };
+
+  const filteredHistory = useMemo(() => {
+    const q = historyQuery.trim().toLowerCase();
+    if (!q) return history;
+    return history.filter(
+      (h) =>
+        h.outputFilename.toLowerCase().includes(q) ||
+        h.inputName.toLowerCase().includes(q) ||
+        h.outputExt.toLowerCase().includes(q) ||
+        h.outputLabel.toLowerCase().includes(q),
+    );
+  }, [history, historyQuery]);
+
 
   const isCombine = family.mode === "combine";
   const hasValid = items.some((i) => i.status.kind !== "rejected");
@@ -856,6 +935,19 @@ export function ConverterDialog({ family, onClose }: Props) {
             )}
             {family.mode === "per-file" && anyDone && summary.done > 1 && (
               <>
+                <Select
+                  value={zipStructure}
+                  onValueChange={(v) => setZipStructure(v as ZipStructure)}
+                  disabled={zipState.kind === "working"}
+                >
+                  <SelectTrigger className="h-9 w-[180px]" aria-label="ZIP folder structure">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="flat">ZIP: flat files</SelectItem>
+                    <SelectItem value="subfolders">ZIP: per-input subfolders</SelectItem>
+                  </SelectContent>
+                </Select>
                 <Button variant="outline" onClick={downloadAllSeparate} disabled={zipState.kind === "working"}>
                   <Download className="mr-2 h-4 w-4" aria-hidden />
                   Download separately
@@ -865,6 +957,12 @@ export function ConverterDialog({ family, onClose }: Props) {
                   {zipState.kind === "working" ? `Zipping ${zipState.percent}%` : "Download as ZIP"}
                 </Button>
               </>
+            )}
+            {isRunning && (
+              <Button variant="outline" onClick={cancelBatch} aria-label="Cancel active conversion">
+                <StopCircle className="mr-2 h-4 w-4" aria-hidden />
+                Cancel
+              </Button>
             )}
             {family.mode === "per-file" ? (
               <Button
@@ -893,24 +991,55 @@ export function ConverterDialog({ family, onClose }: Props) {
             )}
           </div>
 
+
           {/* History panel */}
           {showHistory && (
             <div
               id="history-panel"
               className="rounded-md border border-foreground/10 bg-foreground/[0.02] p-3"
             >
-              <div className="mb-2 flex items-center justify-between">
+              <div className="mb-2 flex items-center justify-between gap-2">
                 <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
                   Recent conversions ({family.title})
                 </p>
+                {history.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm("Clear all history for this converter? Stored outputs will be deleted.")) {
+                        history.forEach((h) => removeEntry(h.id));
+                      }
+                    }}
+
+                    className="flex items-center gap-1 rounded border border-foreground/15 px-2 py-0.5 text-[10px] font-mono uppercase tracking-widest text-muted-foreground hover:bg-foreground/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground"
+                    aria-label="Clear history for this converter"
+                  >
+                    <Trash2 className="h-3 w-3" aria-hidden />
+                    Clear all
+                  </button>
+                )}
               </div>
+              {history.length > 0 && (
+                <div className="relative mb-2">
+                  <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                  <Input
+                    value={historyQuery}
+                    onChange={(e) => setHistoryQuery(e.target.value)}
+                    placeholder="Search by filename or format…"
+                    aria-label="Search history"
+                    className="h-8 pl-7 text-xs"
+                  />
+                </div>
+              )}
               {history.length === 0 ? (
                 <p className="text-xs text-muted-foreground">
-                  No history yet. Conversions you run here are saved locally so you can re-run with the same settings.
+                  No history yet. Conversions you run here are saved locally so you can re-download or re-run with the same settings.
                 </p>
+              ) : filteredHistory.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No entries match "{historyQuery}".</p>
               ) : (
                 <ul className="max-h-56 space-y-1 overflow-y-auto">
-                  {history.map((h) => (
+                  {filteredHistory.map((h) => (
                     <li
                       key={h.id}
                       className="flex items-center gap-2 rounded border border-foreground/10 bg-background px-2 py-1.5 text-xs"
@@ -923,11 +1052,34 @@ export function ConverterDialog({ family, onClose }: Props) {
                           {h.pageRange && ` · pages ${h.pageRange}`}
                         </p>
                       </div>
+                      {h.hasBlob && (
+                        <button
+                          type="button"
+                          onClick={() => previewFromHistory(h)}
+                          className="rounded p-1 text-muted-foreground hover:bg-foreground/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground"
+                          aria-label={`Preview ${h.outputFilename}`}
+                          title="Preview"
+                        >
+                          <Eye className="h-3.5 w-3.5" aria-hidden />
+                        </button>
+                      )}
+                      {h.hasBlob && (
+                        <button
+                          type="button"
+                          onClick={() => redownloadFromHistory(h)}
+                          className="rounded p-1 text-muted-foreground hover:bg-foreground/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground"
+                          aria-label={`Download ${h.outputFilename}`}
+                          title="Download stored output"
+                        >
+                          <Download className="h-3.5 w-3.5" aria-hidden />
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => rerunFromHistory(h)}
                         className="rounded border border-foreground/15 px-2 py-0.5 text-[10px] font-mono uppercase tracking-widest hover:bg-foreground/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground"
                         aria-label={`Re-run conversion for ${h.inputName}`}
+                        title="Re-run with same settings"
                       >
                         Re-run
                       </button>
@@ -935,7 +1087,8 @@ export function ConverterDialog({ family, onClose }: Props) {
                         type="button"
                         onClick={() => removeEntry(h.id)}
                         className="rounded p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground"
-                        aria-label="Remove from history"
+                        aria-label={`Delete ${h.outputFilename} from history`}
+                        title="Delete entry"
                       >
                         <X className="h-3 w-3" aria-hidden />
                       </button>
@@ -943,6 +1096,7 @@ export function ConverterDialog({ family, onClose }: Props) {
                   ))}
                 </ul>
               )}
+
             </div>
           )}
         </DialogContent>
