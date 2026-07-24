@@ -1006,18 +1006,11 @@ export function ConverterDialog({ family, onClose }: Props) {
                   <button
                     type="button"
                     onClick={() => {
-                      if (confirm("Clear all history for this converter family? Stored outputs will be deleted.")) {
-                        // clearHistory clears ALL families; filter and rewrite instead
-                        const others = loadHistory().filter((e) => e.familyId !== family.id);
-                        try {
-                          localStorage.setItem("monochrome:history:v1", JSON.stringify(others));
-                          history.forEach((h) => removeEntry(h.id));
-                          // removeEntry above already dispatches events + deletes blobs
-                        } catch {
-                          /* ignore */
-                        }
+                      if (confirm("Clear all history for this converter? Stored outputs will be deleted.")) {
+                        history.forEach((h) => removeEntry(h.id));
                       }
                     }}
+
                     className="flex items-center gap-1 rounded border border-foreground/15 px-2 py-0.5 text-[10px] font-mono uppercase tracking-widest text-muted-foreground hover:bg-foreground/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground"
                     aria-label="Clear history for this converter"
                   >
