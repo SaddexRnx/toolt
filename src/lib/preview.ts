@@ -52,3 +52,38 @@ export async function makePreview(file: File): Promise<string | null> {
   }
   return null;
 }
+
+/** Render up to `maxPages` pages of a PDF blob into PNG object URLs. */
+export async function renderPdfPages(
+  blob: Blob,
+  maxPages = 30,
+  scale = 1.25,
+): Promise<string[]> {
+  const urls: string[] = [];
+  try {
+    const pdfjs = await import("pdfjs-dist");
+    const workerUrl = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
+    (pdfjs as unknown as { GlobalWorkerOptions: { workerSrc: string } }).GlobalWorkerOptions.workerSrc = workerUrl;
+    const buf = await blob.arrayBuffer();
+    const doc = await pdfjs.getDocument({ data: new Uint8Array(buf) }).promise;
+    const count = Math.min(doc.numPages, maxPages);
+    for (let i = 1; i <= count; i++) {
+      const page = await doc.getPage(i);
+      const viewport = page.getViewport({ scale });
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+      const ctx = canvas.getContext("2d")!;
+      await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+      const pngBlob: Blob = await new Promise((resolve, reject) =>
+        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("encode failed"))), "image/png"),
+      );
+      urls.push(URL.createObjectURL(pngBlob));
+    }
+    await doc.cleanup();
+  } catch {
+    // partial results returned if any
+  }
+  return urls;
+}
+
