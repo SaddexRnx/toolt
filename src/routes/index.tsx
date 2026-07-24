@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { ArrowUpRight, ShieldCheck, Zap, Layers } from "lucide-react";
-import { groups, type Converter } from "@/lib/converters";
+import { groups, type Family } from "@/lib/converters";
 import { ConverterDialog } from "@/components/ConverterDialog";
 
 export const Route = createFileRoute("/")({
