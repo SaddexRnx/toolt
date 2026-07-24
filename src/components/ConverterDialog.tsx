@@ -47,7 +47,7 @@ type QueueItem = { id: string; file: File; status: FileStatus; preview?: string 
 type CombineState =
   | { kind: "idle" }
   | { kind: "working" }
-  | { kind: "done"; url: string; filename: string; size: number; blob: Blob }
+  | { kind: "done"; filename: string; size: number; blob: Blob }
   | { kind: "error"; message: string };
 
 type NameMode = "keep" | "suffix" | "timestamp";
