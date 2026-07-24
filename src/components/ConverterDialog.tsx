@@ -73,6 +73,8 @@ const getExt = (name: string) => {
   return m ? m[1].toUpperCase() : "";
 };
 
+type ZipStructure = "flat" | "subfolders";
+
 function applyNameMode(filename: string, mode: NameMode, suffix: string): string {
   if (mode === "keep") return filename;
   const dot = filename.lastIndexOf(".");
@@ -85,6 +87,12 @@ function applyNameMode(filename: string, mode: NameMode, suffix: string): string
   const s = (suffix || "converted").replace(/[^\w.-]+/g, "-");
   return `${base}-${s}${ext}`;
 }
+
+const stripExt = (name: string) => {
+  const dot = name.lastIndexOf(".");
+  return dot > 0 ? name.slice(0, dot) : name;
+};
+
 
 export function ConverterDialog({ family, onClose }: Props) {
   const [items, setItems] = useState<QueueItem[]>([]);
