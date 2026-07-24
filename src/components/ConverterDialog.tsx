@@ -303,7 +303,7 @@ export function ConverterDialog({ family, onClose }: Props) {
     ext: string,
     label: string,
   ) => {
-    saveEntry({
+    const id = saveEntry({
       familyId: family.id,
       familyTitle: family.title,
       category: family.category,
@@ -316,7 +316,9 @@ export function ConverterDialog({ family, onClose }: Props) {
       nameMode,
       nameSuffix: nameMode === "suffix" ? nameSuffix : undefined,
       pageRange: isPdfSplit ? pageRange : undefined,
+      hasBlob: true,
     });
+    void saveBlob(id, result.blob);
   };
 
   const convertOne = async (item: QueueItem) => {
@@ -352,9 +354,29 @@ export function ConverterDialog({ family, onClose }: Props) {
 
   const runPerFile = async () => {
     if (family.mode !== "per-file" || !selectedOutput) return;
+    cancelRef.current = false;
     const pending = items.filter((i) => i.status.kind === "pending" || i.status.kind === "error");
-    for (const item of pending) await convertOne(item);
+    for (const item of pending) {
+      if (cancelRef.current) {
+        // Restore any files that never got processed back to pending
+        setItems((prev) =>
+          prev.map((i) =>
+            i.id === item.id && i.status.kind !== "done" && i.status.kind !== "rejected"
+              ? { ...i, status: { kind: "error", message: "Canceled" } }
+              : i,
+          ),
+        );
+        break;
+      }
+      await convertOne(item);
+    }
+    cancelRef.current = false;
   };
+
+  const cancelBatch = () => {
+    cancelRef.current = true;
+  };
+
 
   const runCombine = async () => {
     if (family.mode !== "combine") return;
