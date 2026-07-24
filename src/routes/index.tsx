@@ -27,8 +27,12 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
-  const [active, setActive] = useState<Converter | null>(null);
+  const [active, setActive] = useState<Family | null>(null);
   const total = groups.reduce((n, g) => n + g.items.length, 0);
+  const totalOutputs = groups.reduce(
+    (n, g) => n + g.items.reduce((m, f) => m + (f.mode === "per-file" ? f.outputs.length : 1), 0),
+    0,
+  );
 
   return (
     <div className="min-h-screen bg-background text-foreground">
