@@ -24,14 +24,26 @@ import {
   Eye,
   History as HistoryIcon,
   AlertTriangle,
+  StopCircle,
+  Search,
+  Trash2,
 } from "lucide-react";
 import type { Family, OutputOption } from "@/lib/converters";
 import { isAcceptedFile } from "@/lib/converters";
 import { canPreview, makePreview } from "@/lib/preview";
 import { parsePageRange, validatePageRange } from "@/lib/pdf-range";
-import { loadHistory, saveEntry, removeEntry, type HistoryEntry } from "@/lib/history";
+import {
+  loadHistory,
+  saveEntry,
+  removeEntry,
+  clearHistory,
+  saveBlob,
+  getBlob,
+  type HistoryEntry,
+} from "@/lib/history";
 import { OutputPreview } from "@/components/OutputPreview";
 import { cn } from "@/lib/utils";
+
 
 type Props = { family: Family | null; onClose: () => void };
 
