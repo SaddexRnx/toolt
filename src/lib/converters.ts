@@ -1,21 +1,54 @@
-// All conversions run client-side. Each converter takes File(s) and returns a Blob + filename.
-// Kept intentionally lightweight — heavy libs (pdfjs, ffmpeg.wasm) can be added later.
+// All conversions run client-side. Two family shapes:
+//   • "per-file": one input file → one output; supports batch queue and an output-format dropdown.
+//   • "combine":  multiple input files → one output file (merge/zip).
 
 export type ConvertResult = { blob: Blob; filename: string };
-export type ConverterFn = (files: File[]) => Promise<ConvertResult>;
 
-export type Converter = {
-  id: string;
-  from: string; // source extension label
-  to: string; // target extension label
-  label: string; // "PDF → JPG" etc.
+export type OutputOption = {
+  ext: string; // "PNG"
+  label: string; // "PNG (lossless)"
   description: string;
-  accept: string; // input accept attr
-  multiple?: boolean;
-  run: ConverterFn;
+  run: (file: File) => Promise<ConvertResult>;
 };
 
+type FamilyBase = {
+  id: string;
+  category: string;
+  title: string;
+  description: string;
+  accept: string; // input accept attr
+  inputExts: string[]; // display list e.g. ["JPG","PNG","WEBP"]
+};
+
+export type PerFileFamily = FamilyBase & { mode: "per-file"; outputs: OutputOption[] };
+export type CombineFamily = FamilyBase & {
+  mode: "combine";
+  outputExt: string;
+  outputLabel: string;
+  outputDescription: string;
+  run: (files: File[]) => Promise<ConvertResult>;
+};
+
+export type Family = PerFileFamily | CombineFamily;
+
 const stripExt = (name: string) => name.replace(/\.[^.]+$/, "");
+const getExt = (name: string) => {
+  const m = name.match(/\.([^.]+)$/);
+  return m ? m[1].toUpperCase() : "";
+};
+
+export function isAcceptedFile(family: Family, file: File): boolean {
+  const ext = getExt(file.name);
+  if (family.inputExts.includes(ext)) return true;
+  // fallback: mime prefix match on accept
+  const parts = family.accept.split(",").map((p) => p.trim().toLowerCase());
+  return parts.some((p) => {
+    if (!p) return false;
+    if (p.startsWith(".")) return file.name.toLowerCase().endsWith(p);
+    if (p.endsWith("/*")) return file.type.startsWith(p.slice(0, -1));
+    return file.type === p;
+  });
+}
 
 // --- image helpers -------------------------------------------------
 async function imageToCanvas(file: File): Promise<HTMLCanvasElement> {
@@ -38,66 +71,91 @@ function canvasToBlob(canvas: HTMLCanvasElement, mime: string, quality = 0.92): 
   });
 }
 
-function imageConverter(id: string, from: string, to: string, mime: string, accept: string): Converter {
+function imageOutput(ext: string, mime: string, label: string, description: string, quality?: number): OutputOption {
   return {
-    id,
-    from,
-    to,
-    label: `${from} → ${to}`,
-    description: `Convert ${from} images to ${to}.`,
-    accept,
-    run: async (files) => {
-      const file = files[0];
+    ext,
+    label,
+    description,
+    run: async (file) => {
       const canvas = await imageToCanvas(file);
-      const blob = await canvasToBlob(canvas, mime);
-      return { blob, filename: `${stripExt(file.name)}.${to.toLowerCase()}` };
+      const blob = await canvasToBlob(canvas, mime, quality);
+      return { blob, filename: `${stripExt(file.name)}.${ext.toLowerCase()}` };
     },
   };
 }
 
 // --- registry ------------------------------------------------------
-export const converters: Converter[] = [
-  // Images
-  imageConverter("jpg-png", "JPG", "PNG", "image/png", "image/jpeg,image/jpg"),
-  imageConverter("png-jpg", "PNG", "JPG", "image/jpeg", "image/png"),
-  imageConverter("jpg-webp", "JPG", "WEBP", "image/webp", "image/jpeg,image/jpg"),
-  imageConverter("png-webp", "PNG", "WEBP", "image/webp", "image/png"),
-  imageConverter("webp-png", "WEBP", "PNG", "image/png", "image/webp"),
-  imageConverter("webp-jpg", "WEBP", "JPG", "image/jpeg", "image/webp"),
-
-  // Image compress
+export const families: Family[] = [
+  // ============ IMAGES ============
+  {
+    id: "image-convert",
+    category: "Images",
+    title: "Convert image",
+    description: "Convert between JPG, PNG, WEBP, GIF, BMP and more.",
+    accept: "image/*",
+    inputExts: ["JPG", "JPEG", "PNG", "WEBP", "GIF", "BMP", "AVIF", "TIFF", "TIF"],
+    mode: "per-file",
+    outputs: [
+      imageOutput("PNG", "image/png", "PNG (lossless)", "Lossless raster with alpha channel."),
+      imageOutput("JPG", "image/jpeg", "JPG (photo)", "Smaller size, no transparency.", 0.92),
+      imageOutput("WEBP", "image/webp", "WEBP (modern)", "Better compression than JPG/PNG.", 0.9),
+    ],
+  },
   {
     id: "image-compress",
-    from: "IMAGE",
-    to: "COMPRESSED",
-    label: "Compress image",
-    description: "Reduce JPG / PNG / WEBP size while keeping quality.",
+    category: "Images",
+    title: "Compress image",
+    description: "Reduce image size while keeping visual quality.",
     accept: "image/*",
-    run: async (files) => {
-      const { default: compress } = await import("browser-image-compression");
-      const file = files[0];
-      const out = await compress(file, { maxSizeMB: 1, maxWidthOrHeight: 2400, useWebWorker: true });
-      return { blob: out, filename: `compressed-${file.name}` };
-    },
+    inputExts: ["JPG", "JPEG", "PNG", "WEBP"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "AUTO",
+        label: "Same format (smallest)",
+        description: "Keep the input format, target under ~1 MB.",
+        run: async (file) => {
+          const { default: compress } = await import("browser-image-compression");
+          const out = await compress(file, { maxSizeMB: 1, maxWidthOrHeight: 2400, useWebWorker: true });
+          return { blob: out, filename: `compressed-${file.name}` };
+        },
+      },
+      {
+        ext: "WEBP",
+        label: "Convert to WEBP",
+        description: "Re-encode as WEBP for maximum compression.",
+        run: async (file) => {
+          const { default: compress } = await import("browser-image-compression");
+          const out = await compress(file, {
+            maxSizeMB: 1,
+            maxWidthOrHeight: 2400,
+            useWebWorker: true,
+            fileType: "image/webp",
+          });
+          return { blob: out, filename: `${stripExt(file.name)}.webp` };
+        },
+      },
+    ],
   },
 
-  // Images → PDF
+  // ============ PDF ============
   {
-    id: "images-pdf",
-    from: "JPG/PNG",
-    to: "PDF",
-    label: "Images → PDF",
-    description: "Combine one or more images into a single PDF.",
+    id: "images-to-pdf",
+    category: "PDF",
+    title: "Images → PDF",
+    description: "Combine one or more images into a single PDF document.",
     accept: "image/jpeg,image/png",
-    multiple: true,
+    inputExts: ["JPG", "JPEG", "PNG"],
+    mode: "combine",
+    outputExt: "PDF",
+    outputLabel: "Single PDF",
+    outputDescription: "All images stacked as pages in one PDF.",
     run: async (files) => {
       const { PDFDocument } = await import("pdf-lib");
       const doc = await PDFDocument.create();
       for (const file of files) {
         const bytes = new Uint8Array(await file.arrayBuffer());
-        const img = file.type.includes("png")
-          ? await doc.embedPng(bytes)
-          : await doc.embedJpg(bytes);
+        const img = file.type.includes("png") ? await doc.embedPng(bytes) : await doc.embedJpg(bytes);
         const page = doc.addPage([img.width, img.height]);
         page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
       }
@@ -105,16 +163,17 @@ export const converters: Converter[] = [
       return { blob: new Blob([out as BlobPart], { type: "application/pdf" }), filename: "images.pdf" };
     },
   },
-
-  // Merge PDFs
   {
     id: "pdf-merge",
-    from: "PDF",
-    to: "MERGED PDF",
-    label: "Merge PDFs",
-    description: "Combine multiple PDF files into one.",
+    category: "PDF",
+    title: "Merge PDFs",
+    description: "Combine multiple PDF files into one, in the order you drop them.",
     accept: "application/pdf",
-    multiple: true,
+    inputExts: ["PDF"],
+    mode: "combine",
+    outputExt: "PDF",
+    outputLabel: "Merged PDF",
+    outputDescription: "All pages concatenated into one file.",
     run: async (files) => {
       const { PDFDocument } = await import("pdf-lib");
       const out = await PDFDocument.create();
@@ -127,240 +186,334 @@ export const converters: Converter[] = [
       return { blob: new Blob([bytes as BlobPart], { type: "application/pdf" }), filename: "merged.pdf" };
     },
   },
-
-  // Split PDF (one file per page)
   {
     id: "pdf-split",
-    from: "PDF",
-    to: "ZIP (pages)",
-    label: "Split PDF pages",
-    description: "Split a PDF into one file per page, delivered as a ZIP.",
+    category: "PDF",
+    title: "Split PDF",
+    description: "Split a PDF into individual pages, delivered as a ZIP.",
     accept: "application/pdf",
-    run: async (files) => {
-      const { PDFDocument } = await import("pdf-lib");
-      const { default: JSZip } = await import("jszip");
-      const src = await PDFDocument.load(await files[0].arrayBuffer());
-      const zip = new JSZip();
-      for (let i = 0; i < src.getPageCount(); i++) {
-        const doc = await PDFDocument.create();
-        const [page] = await doc.copyPages(src, [i]);
-        doc.addPage(page);
-        const bytes = await doc.save();
-        zip.file(`page-${i + 1}.pdf`, bytes);
-      }
-      const blob = await zip.generateAsync({ type: "blob" });
-      return { blob, filename: `${stripExt(files[0].name)}-pages.zip` };
-    },
+    inputExts: ["PDF"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "ZIP",
+        label: "One PDF per page (ZIP)",
+        description: "Each page becomes its own PDF file inside a ZIP archive.",
+        run: async (file) => {
+          const { PDFDocument } = await import("pdf-lib");
+          const { default: JSZip } = await import("jszip");
+          const src = await PDFDocument.load(await file.arrayBuffer());
+          const zip = new JSZip();
+          for (let i = 0; i < src.getPageCount(); i++) {
+            const doc = await PDFDocument.create();
+            const [page] = await doc.copyPages(src, [i]);
+            doc.addPage(page);
+            const bytes = await doc.save();
+            zip.file(`page-${i + 1}.pdf`, bytes);
+          }
+          const blob = await zip.generateAsync({ type: "blob" });
+          return { blob, filename: `${stripExt(file.name)}-pages.zip` };
+        },
+      },
+    ],
   },
 
-  // Spreadsheets
+  // ============ SPREADSHEETS ============
   {
-    id: "csv-xlsx",
-    from: "CSV",
-    to: "XLSX",
-    label: "CSV → Excel",
-    description: "Convert CSV to an Excel spreadsheet.",
-    accept: ".csv,text/csv",
-    run: async (files) => {
-      const XLSX = await import("xlsx");
-      const text = await files[0].text();
-      const wb = XLSX.read(text, { type: "string" });
-      const out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-      return {
-        blob: new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
-        filename: `${stripExt(files[0].name)}.xlsx`,
-      };
-    },
-  },
-  {
-    id: "xlsx-csv",
-    from: "XLSX",
-    to: "CSV",
-    label: "Excel → CSV",
-    description: "Extract the first sheet of an Excel file as CSV.",
-    accept: ".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    run: async (files) => {
-      const XLSX = await import("xlsx");
-      const wb = XLSX.read(await files[0].arrayBuffer(), { type: "array" });
-      const csv = XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]]);
-      return { blob: new Blob([csv], { type: "text/csv" }), filename: `${stripExt(files[0].name)}.csv` };
-    },
-  },
-  {
-    id: "csv-json",
-    from: "CSV",
-    to: "JSON",
-    label: "CSV → JSON",
-    description: "Convert CSV rows into a JSON array of objects.",
-    accept: ".csv,text/csv",
-    run: async (files) => {
-      const Papa = (await import("papaparse")).default;
-      const text = await files[0].text();
-      const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
-      const json = JSON.stringify(parsed.data, null, 2);
-      return { blob: new Blob([json], { type: "application/json" }), filename: `${stripExt(files[0].name)}.json` };
-    },
-  },
-  {
-    id: "json-csv",
-    from: "JSON",
-    to: "CSV",
-    label: "JSON → CSV",
-    description: "Flatten a JSON array of objects into CSV.",
-    accept: "application/json,.json",
-    run: async (files) => {
-      const Papa = (await import("papaparse")).default;
-      const data = JSON.parse(await files[0].text());
-      const csv = Papa.unparse(data);
-      return { blob: new Blob([csv], { type: "text/csv" }), filename: `${stripExt(files[0].name)}.csv` };
-    },
-  },
-  {
-    id: "xlsx-json",
-    from: "XLSX",
-    to: "JSON",
-    label: "Excel → JSON",
-    description: "Convert the first sheet of an Excel file to JSON.",
-    accept: ".xlsx",
-    run: async (files) => {
-      const XLSX = await import("xlsx");
-      const wb = XLSX.read(await files[0].arrayBuffer(), { type: "array" });
-      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-      return {
-        blob: new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" }),
-        filename: `${stripExt(files[0].name)}.json`,
-      };
-    },
+    id: "spreadsheet",
+    category: "Spreadsheets",
+    title: "Convert spreadsheet",
+    description: "Convert between CSV, TSV, XLSX, XLS, ODS, JSON and HTML.",
+    accept: ".csv,.tsv,.xlsx,.xls,.ods,.txt,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/vnd.oasis.opendocument.spreadsheet",
+    inputExts: ["CSV", "TSV", "XLSX", "XLS", "ODS"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "XLSX",
+        label: "Excel (.xlsx)",
+        description: "Modern Excel spreadsheet.",
+        run: async (file) => {
+          const XLSX = await import("xlsx");
+          const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
+          const out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+          return {
+            blob: new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+            filename: `${stripExt(file.name)}.xlsx`,
+          };
+        },
+      },
+      {
+        ext: "CSV",
+        label: "CSV (comma-separated)",
+        description: "First sheet as CSV.",
+        run: async (file) => {
+          const XLSX = await import("xlsx");
+          const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
+          const csv = XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]]);
+          return { blob: new Blob([csv], { type: "text/csv" }), filename: `${stripExt(file.name)}.csv` };
+        },
+      },
+      {
+        ext: "TSV",
+        label: "TSV (tab-separated)",
+        description: "First sheet as tab-separated values.",
+        run: async (file) => {
+          const XLSX = await import("xlsx");
+          const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
+          const tsv = XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]], { FS: "\t" });
+          return {
+            blob: new Blob([tsv], { type: "text/tab-separated-values" }),
+            filename: `${stripExt(file.name)}.tsv`,
+          };
+        },
+      },
+      {
+        ext: "JSON",
+        label: "JSON (array of rows)",
+        description: "First sheet as an array of row objects.",
+        run: async (file) => {
+          const XLSX = await import("xlsx");
+          const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
+          const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+          return {
+            blob: new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" }),
+            filename: `${stripExt(file.name)}.json`,
+          };
+        },
+      },
+      {
+        ext: "HTML",
+        label: "HTML table",
+        description: "First sheet rendered as an HTML table.",
+        run: async (file) => {
+          const XLSX = await import("xlsx");
+          const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
+          const html = XLSX.utils.sheet_to_html(wb.Sheets[wb.SheetNames[0]]);
+          return { blob: new Blob([html], { type: "text/html" }), filename: `${stripExt(file.name)}.html` };
+        },
+      },
+    ],
   },
 
-  // JSON / YAML / XML
+  // ============ DATA ============
   {
-    id: "json-yaml",
-    from: "JSON",
-    to: "YAML",
-    label: "JSON → YAML",
-    description: "Convert JSON to YAML.",
-    accept: "application/json,.json",
-    run: async (files) => {
-      const yaml = await import("js-yaml");
-      const out = yaml.dump(JSON.parse(await files[0].text()));
-      return { blob: new Blob([out], { type: "text/yaml" }), filename: `${stripExt(files[0].name)}.yaml` };
-    },
-  },
-  {
-    id: "yaml-json",
-    from: "YAML",
-    to: "JSON",
-    label: "YAML → JSON",
-    description: "Convert YAML to JSON.",
-    accept: ".yaml,.yml,text/yaml",
-    run: async (files) => {
-      const yaml = await import("js-yaml");
-      const data = yaml.load(await files[0].text());
-      return {
-        blob: new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }),
-        filename: `${stripExt(files[0].name)}.json`,
-      };
-    },
-  },
-  {
-    id: "json-xml",
-    from: "JSON",
-    to: "XML",
-    label: "JSON → XML",
-    description: "Convert JSON to XML.",
-    accept: "application/json,.json",
-    run: async (files) => {
-      const { XMLBuilder } = await import("fast-xml-parser");
-      const builder = new XMLBuilder({ format: true });
-      const xml = builder.build(JSON.parse(await files[0].text()));
-      return { blob: new Blob([xml], { type: "application/xml" }), filename: `${stripExt(files[0].name)}.xml` };
-    },
-  },
-  {
-    id: "xml-json",
-    from: "XML",
-    to: "JSON",
-    label: "XML → JSON",
-    description: "Convert XML to JSON.",
-    accept: ".xml,application/xml,text/xml",
-    run: async (files) => {
-      const { XMLParser } = await import("fast-xml-parser");
-      const parser = new XMLParser();
-      const data = parser.parse(await files[0].text());
-      return {
-        blob: new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }),
-        filename: `${stripExt(files[0].name)}.json`,
-      };
-    },
+    id: "data",
+    category: "Data",
+    title: "Convert data file",
+    description: "Convert between JSON, YAML and XML.",
+    accept: ".json,.yaml,.yml,.xml,application/json,application/xml,text/xml,text/yaml",
+    inputExts: ["JSON", "YAML", "YML", "XML"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "JSON",
+        label: "JSON",
+        description: "Standard JSON with 2-space indent.",
+        run: async (file) => {
+          const data = await parseData(file);
+          return {
+            blob: new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }),
+            filename: `${stripExt(file.name)}.json`,
+          };
+        },
+      },
+      {
+        ext: "YAML",
+        label: "YAML",
+        description: "Human-readable YAML.",
+        run: async (file) => {
+          const yaml = await import("js-yaml");
+          const data = await parseData(file);
+          return {
+            blob: new Blob([yaml.dump(data)], { type: "text/yaml" }),
+            filename: `${stripExt(file.name)}.yaml`,
+          };
+        },
+      },
+      {
+        ext: "XML",
+        label: "XML",
+        description: "XML built from the parsed structure.",
+        run: async (file) => {
+          const { XMLBuilder } = await import("fast-xml-parser");
+          const data = await parseData(file);
+          const xml = new XMLBuilder({ format: true }).build(data);
+          return { blob: new Blob([xml], { type: "application/xml" }), filename: `${stripExt(file.name)}.xml` };
+        },
+      },
+      {
+        ext: "CSV",
+        label: "CSV (array of objects)",
+        description: "Flatten a JSON/YAML array of objects into CSV.",
+        run: async (file) => {
+          const Papa = (await import("papaparse")).default;
+          const data = await parseData(file);
+          if (!Array.isArray(data)) throw new Error("CSV export needs an array of objects at the root.");
+          return {
+            blob: new Blob([Papa.unparse(data)], { type: "text/csv" }),
+            filename: `${stripExt(file.name)}.csv`,
+          };
+        },
+      },
+    ],
   },
 
-  // Documents
+  // ============ DOCUMENTS ============
   {
-    id: "md-html",
-    from: "MD",
-    to: "HTML",
-    label: "Markdown → HTML",
-    description: "Render Markdown to a standalone HTML document.",
+    id: "markdown",
+    category: "Documents",
+    title: "Markdown → …",
+    description: "Render Markdown to HTML or plain text.",
     accept: ".md,.markdown,text/markdown",
-    run: async (files) => {
-      const { marked } = await import("marked");
-      const body = await marked.parse(await files[0].text());
-      const html = `<!doctype html><meta charset="utf-8"><title>${stripExt(files[0].name)}</title>${body}`;
-      return { blob: new Blob([html], { type: "text/html" }), filename: `${stripExt(files[0].name)}.html` };
-    },
+    inputExts: ["MD", "MARKDOWN"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "HTML",
+        label: "HTML document",
+        description: "Standalone HTML file.",
+        run: async (file) => {
+          const { marked } = await import("marked");
+          const body = await marked.parse(await file.text());
+          const html = `<!doctype html><meta charset="utf-8"><title>${stripExt(file.name)}</title>${body}`;
+          return { blob: new Blob([html], { type: "text/html" }), filename: `${stripExt(file.name)}.html` };
+        },
+      },
+      {
+        ext: "TXT",
+        label: "Plain text",
+        description: "Stripped of Markdown syntax.",
+        run: async (file) => {
+          const { marked } = await import("marked");
+          const html = await marked.parse(await file.text());
+          const text = html.replace(/<[^>]+>/g, "").replace(/\n{3,}/g, "\n\n");
+          return { blob: new Blob([text], { type: "text/plain" }), filename: `${stripExt(file.name)}.txt` };
+        },
+      },
+    ],
   },
   {
-    id: "html-md",
-    from: "HTML",
-    to: "MD",
-    label: "HTML → Markdown",
-    description: "Convert HTML to clean Markdown.",
+    id: "html-to",
+    category: "Documents",
+    title: "HTML → …",
+    description: "Convert HTML to Markdown or plain text.",
     accept: ".html,.htm,text/html",
-    run: async (files) => {
-      const Turndown = (await import("turndown")).default;
-      const td = new Turndown();
-      const md = td.turndown(await files[0].text());
-      return { blob: new Blob([md], { type: "text/markdown" }), filename: `${stripExt(files[0].name)}.md` };
-    },
+    inputExts: ["HTML", "HTM"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "MD",
+        label: "Markdown",
+        description: "Clean Markdown via Turndown.",
+        run: async (file) => {
+          const Turndown = (await import("turndown")).default;
+          const md = new Turndown().turndown(await file.text());
+          return { blob: new Blob([md], { type: "text/markdown" }), filename: `${stripExt(file.name)}.md` };
+        },
+      },
+      {
+        ext: "TXT",
+        label: "Plain text",
+        description: "Text with tags stripped.",
+        run: async (file) => {
+          const text = (await file.text()).replace(/<[^>]+>/g, "").replace(/\s+\n/g, "\n");
+          return { blob: new Blob([text], { type: "text/plain" }), filename: `${stripExt(file.name)}.txt` };
+        },
+      },
+    ],
   },
   {
-    id: "docx-html",
-    from: "DOCX",
-    to: "HTML",
-    label: "Word → HTML",
-    description: "Convert a Word document to HTML.",
+    id: "word",
+    category: "Documents",
+    title: "Word → …",
+    description: "Convert Word (.docx) to HTML, Markdown or plain text.",
     accept: ".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    run: async (files) => {
-      const mammoth = await import("mammoth");
-      const { value } = await mammoth.convertToHtml({ arrayBuffer: await files[0].arrayBuffer() });
-      const html = `<!doctype html><meta charset="utf-8"><title>${stripExt(files[0].name)}</title>${value}`;
-      return { blob: new Blob([html], { type: "text/html" }), filename: `${stripExt(files[0].name)}.html` };
-    },
+    inputExts: ["DOCX"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "HTML",
+        label: "HTML document",
+        description: "Preserves formatting where possible.",
+        run: async (file) => {
+          const mammoth = await import("mammoth");
+          const { value } = await mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() });
+          const html = `<!doctype html><meta charset="utf-8"><title>${stripExt(file.name)}</title>${value}`;
+          return { blob: new Blob([html], { type: "text/html" }), filename: `${stripExt(file.name)}.html` };
+        },
+      },
+      {
+        ext: "MD",
+        label: "Markdown",
+        description: "HTML → Markdown via Turndown.",
+        run: async (file) => {
+          const mammoth = await import("mammoth");
+          const Turndown = (await import("turndown")).default;
+          const { value } = await mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() });
+          const md = new Turndown().turndown(value);
+          return { blob: new Blob([md], { type: "text/markdown" }), filename: `${stripExt(file.name)}.md` };
+        },
+      },
+      {
+        ext: "TXT",
+        label: "Plain text",
+        description: "Raw text extraction, no formatting.",
+        run: async (file) => {
+          const mammoth = await import("mammoth");
+          const { value } = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+          return { blob: new Blob([value], { type: "text/plain" }), filename: `${stripExt(file.name)}.txt` };
+        },
+      },
+    ],
   },
   {
-    id: "docx-txt",
-    from: "DOCX",
-    to: "TXT",
-    label: "Word → Text",
-    description: "Extract plain text from a Word document.",
-    accept: ".docx",
-    run: async (files) => {
-      const mammoth = await import("mammoth");
-      const { value } = await mammoth.extractRawText({ arrayBuffer: await files[0].arrayBuffer() });
-      return { blob: new Blob([value], { type: "text/plain" }), filename: `${stripExt(files[0].name)}.txt` };
-    },
+    id: "text-encode",
+    category: "Documents",
+    title: "Text → encoded",
+    description: "Encode any text file to Base64 or a data URL.",
+    accept: "text/*,.txt,.json,.md,.csv,.xml,.yaml,.yml,.html,.htm",
+    inputExts: ["TXT", "JSON", "MD", "CSV", "XML", "YAML", "HTML"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "TXT",
+        label: "Base64",
+        description: "The file bytes encoded as Base64 text.",
+        run: async (file) => {
+          const buf = new Uint8Array(await file.arrayBuffer());
+          let s = "";
+          for (let i = 0; i < buf.length; i++) s += String.fromCharCode(buf[i]);
+          const b64 = btoa(s);
+          return { blob: new Blob([b64], { type: "text/plain" }), filename: `${file.name}.base64.txt` };
+        },
+      },
+      {
+        ext: "TXT",
+        label: "Data URL",
+        description: "A base64 data: URL you can paste anywhere.",
+        run: async (file) => {
+          const buf = new Uint8Array(await file.arrayBuffer());
+          let s = "";
+          for (let i = 0; i < buf.length; i++) s += String.fromCharCode(buf[i]);
+          const url = `data:${file.type || "application/octet-stream"};base64,${btoa(s)}`;
+          return { blob: new Blob([url], { type: "text/plain" }), filename: `${file.name}.dataurl.txt` };
+        },
+      },
+    ],
   },
 
-  // Archives
+  // ============ ARCHIVES ============
   {
-    id: "files-zip",
-    from: "FILES",
-    to: "ZIP",
-    label: "Files → ZIP",
+    id: "files-to-zip",
+    category: "Archives",
+    title: "Files → ZIP",
     description: "Bundle any files into a single ZIP archive.",
     accept: "*/*",
-    multiple: true,
+    inputExts: ["ANY"],
+    mode: "combine",
+    outputExt: "ZIP",
+    outputLabel: "ZIP archive",
+    outputDescription: "All dropped files bundled into archive.zip.",
     run: async (files) => {
       const { default: JSZip } = await import("jszip");
       const zip = new JSZip();
@@ -370,34 +523,61 @@ export const converters: Converter[] = [
     },
   },
   {
-    id: "zip-extract",
-    from: "ZIP",
-    to: "FOLDER (zip)",
-    label: "Extract & re-pack ZIP",
-    description: "Extract a ZIP and repack it (round-trip inspection).",
+    id: "zip-repack",
+    category: "Archives",
+    title: "Repack ZIP",
+    description: "Extract a ZIP and repack it (useful for round-trip inspection).",
     accept: ".zip,application/zip",
-    run: async (files) => {
-      const { default: JSZip } = await import("jszip");
-      const src = await JSZip.loadAsync(await files[0].arrayBuffer());
-      const out = new JSZip();
-      const entries = Object.values(src.files);
-      for (const entry of entries) {
-        if (entry.dir) continue;
-        out.file(entry.name, await entry.async("uint8array"));
-      }
-      const blob = await out.generateAsync({ type: "blob" });
-      return { blob, filename: `extracted-${files[0].name}` };
-    },
+    inputExts: ["ZIP"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "ZIP",
+        label: "Repacked ZIP",
+        description: "Re-compressed archive with the same contents.",
+        run: async (file) => {
+          const { default: JSZip } = await import("jszip");
+          const src = await JSZip.loadAsync(await file.arrayBuffer());
+          const out = new JSZip();
+          for (const entry of Object.values(src.files)) {
+            if (entry.dir) continue;
+            out.file(entry.name, await entry.async("uint8array"));
+          }
+          const blob = await out.generateAsync({ type: "blob" });
+          return { blob, filename: `repacked-${file.name}` };
+        },
+      },
+    ],
   },
 ];
 
-export type ConverterGroup = { title: string; items: Converter[] };
+async function parseData(file: File): Promise<unknown> {
+  const text = await file.text();
+  const ext = getExt(file.name);
+  if (ext === "JSON") return JSON.parse(text);
+  if (ext === "YAML" || ext === "YML") {
+    const yaml = await import("js-yaml");
+    return yaml.load(text);
+  }
+  if (ext === "XML") {
+    const { XMLParser } = await import("fast-xml-parser");
+    return new XMLParser().parse(text);
+  }
+  // fallback try-order
+  try {
+    return JSON.parse(text);
+  } catch {
+    const yaml = await import("js-yaml");
+    return yaml.load(text);
+  }
+}
 
-export const groups: ConverterGroup[] = [
-  { title: "Images", items: converters.filter((c) => ["jpg-png","png-jpg","jpg-webp","png-webp","webp-png","webp-jpg","image-compress"].includes(c.id)) },
-  { title: "PDF", items: converters.filter((c) => ["images-pdf","pdf-merge","pdf-split"].includes(c.id)) },
-  { title: "Spreadsheets", items: converters.filter((c) => ["csv-xlsx","xlsx-csv","csv-json","json-csv","xlsx-json"].includes(c.id)) },
-  { title: "Data", items: converters.filter((c) => ["json-yaml","yaml-json","json-xml","xml-json"].includes(c.id)) },
-  { title: "Documents", items: converters.filter((c) => ["md-html","html-md","docx-html","docx-txt"].includes(c.id)) },
-  { title: "Archives", items: converters.filter((c) => ["files-zip","zip-extract"].includes(c.id)) },
-];
+export type FamilyGroup = { title: string; items: Family[] };
+export const groups: FamilyGroup[] = Array.from(
+  families.reduce((map, f) => {
+    const arr = map.get(f.category) ?? [];
+    arr.push(f);
+    map.set(f.category, arr);
+    return map;
+  }, new Map<string, Family[]>()),
+).map(([title, items]) => ({ title, items }));
