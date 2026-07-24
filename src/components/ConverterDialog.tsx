@@ -935,6 +935,19 @@ export function ConverterDialog({ family, onClose }: Props) {
             )}
             {family.mode === "per-file" && anyDone && summary.done > 1 && (
               <>
+                <Select
+                  value={zipStructure}
+                  onValueChange={(v) => setZipStructure(v as ZipStructure)}
+                  disabled={zipState.kind === "working"}
+                >
+                  <SelectTrigger className="h-9 w-[180px]" aria-label="ZIP folder structure">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="flat">ZIP: flat files</SelectItem>
+                    <SelectItem value="subfolders">ZIP: per-input subfolders</SelectItem>
+                  </SelectContent>
+                </Select>
                 <Button variant="outline" onClick={downloadAllSeparate} disabled={zipState.kind === "working"}>
                   <Download className="mr-2 h-4 w-4" aria-hidden />
                   Download separately
@@ -944,6 +957,12 @@ export function ConverterDialog({ family, onClose }: Props) {
                   {zipState.kind === "working" ? `Zipping ${zipState.percent}%` : "Download as ZIP"}
                 </Button>
               </>
+            )}
+            {isRunning && (
+              <Button variant="outline" onClick={cancelBatch} aria-label="Cancel active conversion">
+                <StopCircle className="mr-2 h-4 w-4" aria-hidden />
+                Cancel
+              </Button>
             )}
             {family.mode === "per-file" ? (
               <Button
@@ -971,6 +990,7 @@ export function ConverterDialog({ family, onClose }: Props) {
               </Button>
             )}
           </div>
+
 
           {/* History panel */}
           {showHistory && (
