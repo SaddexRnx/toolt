@@ -386,7 +386,7 @@ export function ConverterDialog({ family, onClose }: Props) {
     try {
       const { blob, filename } = await family.run(valid);
       setCombineState({ kind: "done", filename, size: blob.size, blob });
-      saveEntry({
+      const id = saveEntry({
         familyId: family.id,
         familyTitle: family.title,
         category: family.category,
@@ -398,11 +398,14 @@ export function ConverterDialog({ family, onClose }: Props) {
         outputSize: blob.size,
         nameMode,
         nameSuffix: nameMode === "suffix" ? nameSuffix : undefined,
+        hasBlob: true,
       });
+      void saveBlob(id, blob);
     } catch (e) {
       setCombineState({ kind: "error", message: e instanceof Error ? e.message : String(e) });
     }
   };
+
 
   const triggerDownload = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
