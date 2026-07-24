@@ -44,7 +44,7 @@ function Home() {
             <span className="text-sm font-semibold tracking-tight">monochrome</span>
           </div>
           <span className="hidden text-xs font-mono uppercase tracking-widest text-muted-foreground md:block">
-            {total} converters · 100% in-browser
+            {total} tools · {totalOutputs} formats · 100% in-browser
           </span>
         </div>
       </header>
