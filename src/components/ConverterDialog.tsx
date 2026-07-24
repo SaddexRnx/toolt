@@ -442,6 +442,10 @@ export function ConverterDialog({ family, onClose }: Props) {
       const seen = new Map<string, number>();
       for (const it of done) {
         let name = applyNameMode(it.status.filename, nameMode, nameSuffix);
+        if (zipStructure === "subfolders") {
+          const folder = stripExt(it.file.name).replace(/[\\/:*?"<>|]+/g, "_") || "file";
+          name = `${folder}/${name}`;
+        }
         const n = seen.get(name) ?? 0;
         if (n > 0) {
           const dot = name.lastIndexOf(".");
@@ -450,6 +454,7 @@ export function ConverterDialog({ family, onClose }: Props) {
         seen.set(name, n + 1);
         zip.file(name, it.status.blob);
       }
+
       const blob = await zip.generateAsync({ type: "blob" }, (meta) => {
         setZipState({ kind: "working", percent: Math.round(meta.percent) });
       });
