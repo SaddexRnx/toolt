@@ -36,11 +36,11 @@ import {
   loadHistory,
   saveEntry,
   removeEntry,
-  clearHistory,
   saveBlob,
   getBlob,
   type HistoryEntry,
 } from "@/lib/history";
+
 import { OutputPreview } from "@/components/OutputPreview";
 import { cn } from "@/lib/utils";
 
