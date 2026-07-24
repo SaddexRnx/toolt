@@ -998,18 +998,55 @@ export function ConverterDialog({ family, onClose }: Props) {
               id="history-panel"
               className="rounded-md border border-foreground/10 bg-foreground/[0.02] p-3"
             >
-              <div className="mb-2 flex items-center justify-between">
+              <div className="mb-2 flex items-center justify-between gap-2">
                 <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
                   Recent conversions ({family.title})
                 </p>
+                {history.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm("Clear all history for this converter family? Stored outputs will be deleted.")) {
+                        // clearHistory clears ALL families; filter and rewrite instead
+                        const others = loadHistory().filter((e) => e.familyId !== family.id);
+                        try {
+                          localStorage.setItem("monochrome:history:v1", JSON.stringify(others));
+                          history.forEach((h) => removeEntry(h.id));
+                          // removeEntry above already dispatches events + deletes blobs
+                        } catch {
+                          /* ignore */
+                        }
+                      }
+                    }}
+                    className="flex items-center gap-1 rounded border border-foreground/15 px-2 py-0.5 text-[10px] font-mono uppercase tracking-widest text-muted-foreground hover:bg-foreground/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground"
+                    aria-label="Clear history for this converter"
+                  >
+                    <Trash2 className="h-3 w-3" aria-hidden />
+                    Clear all
+                  </button>
+                )}
               </div>
+              {history.length > 0 && (
+                <div className="relative mb-2">
+                  <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                  <Input
+                    value={historyQuery}
+                    onChange={(e) => setHistoryQuery(e.target.value)}
+                    placeholder="Search by filename or format…"
+                    aria-label="Search history"
+                    className="h-8 pl-7 text-xs"
+                  />
+                </div>
+              )}
               {history.length === 0 ? (
                 <p className="text-xs text-muted-foreground">
-                  No history yet. Conversions you run here are saved locally so you can re-run with the same settings.
+                  No history yet. Conversions you run here are saved locally so you can re-download or re-run with the same settings.
                 </p>
+              ) : filteredHistory.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No entries match "{historyQuery}".</p>
               ) : (
                 <ul className="max-h-56 space-y-1 overflow-y-auto">
-                  {history.map((h) => (
+                  {filteredHistory.map((h) => (
                     <li
                       key={h.id}
                       className="flex items-center gap-2 rounded border border-foreground/10 bg-background px-2 py-1.5 text-xs"
@@ -1022,11 +1059,34 @@ export function ConverterDialog({ family, onClose }: Props) {
                           {h.pageRange && ` · pages ${h.pageRange}`}
                         </p>
                       </div>
+                      {h.hasBlob && (
+                        <button
+                          type="button"
+                          onClick={() => previewFromHistory(h)}
+                          className="rounded p-1 text-muted-foreground hover:bg-foreground/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground"
+                          aria-label={`Preview ${h.outputFilename}`}
+                          title="Preview"
+                        >
+                          <Eye className="h-3.5 w-3.5" aria-hidden />
+                        </button>
+                      )}
+                      {h.hasBlob && (
+                        <button
+                          type="button"
+                          onClick={() => redownloadFromHistory(h)}
+                          className="rounded p-1 text-muted-foreground hover:bg-foreground/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground"
+                          aria-label={`Download ${h.outputFilename}`}
+                          title="Download stored output"
+                        >
+                          <Download className="h-3.5 w-3.5" aria-hidden />
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => rerunFromHistory(h)}
                         className="rounded border border-foreground/15 px-2 py-0.5 text-[10px] font-mono uppercase tracking-widest hover:bg-foreground/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground"
                         aria-label={`Re-run conversion for ${h.inputName}`}
+                        title="Re-run with same settings"
                       >
                         Re-run
                       </button>
@@ -1034,7 +1094,8 @@ export function ConverterDialog({ family, onClose }: Props) {
                         type="button"
                         onClick={() => removeEntry(h.id)}
                         className="rounded p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground"
-                        aria-label="Remove from history"
+                        aria-label={`Delete ${h.outputFilename} from history`}
+                        title="Delete entry"
                       >
                         <X className="h-3 w-3" aria-hidden />
                       </button>
@@ -1042,6 +1103,7 @@ export function ConverterDialog({ family, onClose }: Props) {
                   ))}
                 </ul>
               )}
+
             </div>
           )}
         </DialogContent>
