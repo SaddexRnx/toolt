@@ -213,10 +213,10 @@ function Home() {
         <div className="mb-6 flex items-baseline justify-between border-b border-foreground/10 pb-3">
           <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight">
             <span className="brand-dot-sm" aria-hidden />
-            All tools
+            {t("catalog.title")}
           </h2>
           <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-            {totalFiltered} shown
+            {t("catalog.shown", { n: totalFiltered })}
           </span>
         </div>
 
@@ -231,6 +231,7 @@ function Home() {
                   cat === "All"
                     ? total
                     : mergedGroups.find((g) => g.title === cat)?.items.length ?? 0;
+                const label = cat === "All" ? t("catalog.category.all") : cat;
                 return (
                   <button
                     key={cat}
@@ -241,7 +242,7 @@ function Home() {
                         : "border-foreground/15 text-foreground/70 hover:border-foreground/40 hover:text-foreground"
                     }`}
                   >
-                    {cat}
+                    {label}
                     <span className={`ml-1.5 font-mono text-[10px] ${isActive ? "opacity-70" : "opacity-50"}`}>
                       {count}
                     </span>
@@ -256,8 +257,8 @@ function Home() {
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search tools, formats…"
-                aria-label="Search tools"
+                placeholder={t("catalog.search.placeholder")}
+                aria-label={t("catalog.search.placeholder")}
                 className="w-full rounded-full border border-foreground/15 bg-background py-1.5 pl-9 pr-3 text-sm outline-none focus:border-foreground"
               />
             </div>
@@ -266,7 +267,7 @@ function Home() {
 
         {filteredGroups.length === 0 ? (
           <div className="rounded-md border border-foreground/10 p-10 text-center text-sm text-muted-foreground">
-            No To_olT tools match your search. Try clearing the filter or another keyword.
+            {t("catalog.empty")}
           </div>
         ) : (
           filteredGroups.map((group) => (
