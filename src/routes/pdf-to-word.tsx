@@ -162,7 +162,7 @@ function PdfToWordPage() {
         </div>
       </footer>
 
-      <ConverterDialog family={family} open={open} onOpenChange={setOpen} />
+      <ConverterDialog family={open ? family : null} onClose={() => setOpen(false)} />
     </main>
   );
 }
