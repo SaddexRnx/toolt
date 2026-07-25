@@ -209,7 +209,7 @@ function Home() {
 
         {filteredGroups.length === 0 ? (
           <div className="rounded-md border border-foreground/10 p-10 text-center text-sm text-muted-foreground">
-            No tools match your search. Try clearing the filter or another keyword.
+            No To_olT tools match your search. Try clearing the filter or another keyword.
           </div>
         ) : (
           filteredGroups.map((group) => (
