@@ -189,7 +189,7 @@ export function SmartDropZone({ onPick }: Props) {
                 <div className="max-h-[420px] overflow-y-auto">
                   {filtered.length === 0 ? (
                     <div className="p-8 text-center text-sm text-muted-foreground">
-                      No tools match "{query}".
+                      No To_olT tools match "{query}".
                     </div>
                   ) : (
                     <ul className="divide-y divide-foreground/5">
