@@ -3564,7 +3564,554 @@ export const families: Family[] = [
       },
     ],
   },
+  // =========================================================================
+  // Developer batch
+  // =========================================================================
+  {
+    id: "yaml-to-json",
+    category: "Developer",
+    title: "YAML → JSON",
+    description: "Convert YAML documents to pretty JSON.",
+    accept: ".yaml,.yml,text/yaml",
+    inputExts: ["YAML", "YML"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "JSON",
+        label: "JSON (2-space)",
+        description: "Parse YAML and emit indented JSON.",
+        run: async (file) => {
+          const yaml = await import("js-yaml");
+          const data = yaml.load(await file.text());
+          return { blob: new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }), filename: `${stripExt(file.name)}.json` };
+        },
+      },
+    ],
+  },
+  {
+    id: "json-to-yaml",
+    category: "Developer",
+    title: "JSON → YAML",
+    description: "Convert JSON to tidy YAML.",
+    accept: ".json,application/json",
+    inputExts: ["JSON"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "YAML",
+        label: "YAML (2-space)",
+        description: "Emit YAML with 2-space indent.",
+        run: async (file) => {
+          const yaml = await import("js-yaml");
+          const data = JSON.parse(await file.text());
+          return { blob: new Blob([yaml.dump(data, { indent: 2 })], { type: "text/yaml" }), filename: `${stripExt(file.name)}.yaml` };
+        },
+      },
+    ],
+  },
+  {
+    id: "toml-json",
+    category: "Developer",
+    title: "TOML ↔ JSON",
+    description: "Convert between TOML and JSON.",
+    accept: ".toml,.json",
+    inputExts: ["TOML", "JSON"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "JSON",
+        label: "TOML → JSON",
+        description: "Parse TOML and emit indented JSON.",
+        run: async (file) => {
+          const { parse } = await import("smol-toml");
+          const data = parse(await file.text());
+          return { blob: new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }), filename: `${stripExt(file.name)}.json` };
+        },
+      },
+      {
+        ext: "TOML",
+        label: "JSON → TOML",
+        description: "Parse JSON and emit TOML.",
+        run: async (file) => {
+          const { stringify } = await import("smol-toml");
+          const data = JSON.parse(await file.text());
+          return { blob: new Blob([stringify(data)], { type: "text/plain" }), filename: `${stripExt(file.name)}.toml` };
+        },
+      },
+    ],
+  },
+  {
+    id: "yaml-to-env",
+    category: "Developer",
+    title: "YAML → .env",
+    description: "Flatten a YAML config into KEY=VALUE .env format.",
+    accept: ".yaml,.yml,.json",
+    inputExts: ["YAML", "YML", "JSON"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "ENV",
+        label: ".env (UPPER_SNAKE)",
+        description: "Nested keys join with underscores and uppercase.",
+        run: async (file) => {
+          const yaml = await import("js-yaml");
+          const raw = await file.text();
+          const data = file.name.endsWith(".json") ? JSON.parse(raw) : yaml.load(raw);
+          const out: string[] = [];
+          const walk = (v: unknown, path: string[]) => {
+            if (v && typeof v === "object" && !Array.isArray(v)) {
+              for (const [k, val] of Object.entries(v as Record<string, unknown>)) walk(val, [...path, k]);
+            } else {
+              const key = path.join("_").toUpperCase().replace(/[^A-Z0-9_]/g, "_");
+              const val = Array.isArray(v) ? JSON.stringify(v) : String(v ?? "");
+              out.push(`${key}=${/\s|["'#]/.test(val) ? JSON.stringify(val) : val}`);
+            }
+          };
+          walk(data, []);
+          return { blob: new Blob([out.join("\n") + "\n"], { type: "text/plain" }), filename: `${stripExt(file.name)}.env` };
+        },
+      },
+    ],
+  },
+  {
+    id: "yaml-sort",
+    category: "Developer",
+    title: "YAML key sorter",
+    description: "Sort YAML mapping keys alphabetically, recursively.",
+    accept: ".yaml,.yml",
+    inputExts: ["YAML", "YML"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "YAML",
+        label: "Sorted YAML",
+        description: "Deep sort of object keys.",
+        run: async (file) => {
+          const yaml = await import("js-yaml");
+          const data = yaml.load(await file.text());
+          const sort = (v: unknown): unknown => {
+            if (Array.isArray(v)) return v.map(sort);
+            if (v && typeof v === "object") {
+              return Object.keys(v as object).sort().reduce((a, k) => {
+                (a as Record<string, unknown>)[k] = sort((v as Record<string, unknown>)[k]);
+                return a;
+              }, {} as Record<string, unknown>);
+            }
+            return v;
+          };
+          return { blob: new Blob([yaml.dump(sort(data), { indent: 2 })], { type: "text/yaml" }), filename: `${stripExt(file.name)}-sorted.yaml` };
+        },
+      },
+    ],
+  },
+  {
+    id: "json-schema",
+    category: "Developer",
+    title: "JSON → JSON Schema",
+    description: "Infer a JSON Schema (draft-07) from a JSON sample.",
+    accept: ".json,application/json",
+    inputExts: ["JSON"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "JSON",
+        label: "JSON Schema",
+        description: "Best-effort schema inferred from types.",
+        run: async (file) => {
+          const infer = (v: unknown): Record<string, unknown> => {
+            if (v === null) return { type: "null" };
+            if (Array.isArray(v)) return { type: "array", items: v.length ? infer(v[0]) : {} };
+            const t = typeof v;
+            if (t === "object") {
+              const props: Record<string, unknown> = {};
+              const required: string[] = [];
+              for (const [k, val] of Object.entries(v as object)) { props[k] = infer(val); required.push(k); }
+              return { type: "object", properties: props, required };
+            }
+            if (t === "number") return { type: Number.isInteger(v) ? "integer" : "number" };
+            return { type: t };
+          };
+          const data = JSON.parse(await file.text());
+          const schema = { $schema: "http://json-schema.org/draft-07/schema#", ...infer(data) };
+          return { blob: new Blob([JSON.stringify(schema, null, 2)], { type: "application/json" }), filename: `${stripExt(file.name)}.schema.json` };
+        },
+      },
+    ],
+  },
+  {
+    id: "json-to-sql",
+    category: "Developer",
+    title: "JSON → SQL",
+    description: "Turn a JSON array of objects into CREATE TABLE + INSERT statements.",
+    accept: ".json,application/json",
+    inputExts: ["JSON"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "SQL",
+        label: "CREATE + INSERT",
+        description: "Infers columns from keys; strings quoted, nulls as NULL.",
+        run: async (file) => {
+          const data = JSON.parse(await file.text());
+          if (!Array.isArray(data) || !data.length) throw new Error("Expected a non-empty JSON array of objects.");
+          const table = stripExt(file.name).replace(/[^A-Za-z0-9_]/g, "_") || "data";
+          const cols = Array.from(new Set(data.flatMap((r) => Object.keys(r as object))));
+          const typeOf = (v: unknown) => v === null || v === undefined ? "TEXT" : typeof v === "number" ? (Number.isInteger(v) ? "INTEGER" : "REAL") : typeof v === "boolean" ? "BOOLEAN" : "TEXT";
+          const colTypes = cols.map((c) => `${c} ${typeOf(data.find((r) => (r as Record<string, unknown>)[c] != null)?.[c])}`);
+          const quote = (v: unknown) => v === null || v === undefined ? "NULL" : typeof v === "number" || typeof v === "boolean" ? String(v) : `'${String(v).replace(/'/g, "''")}'`;
+          const inserts = data.map((r) => `INSERT INTO ${table} (${cols.join(", ")}) VALUES (${cols.map((c) => quote((r as Record<string, unknown>)[c])).join(", ")});`);
+          const sql = `CREATE TABLE ${table} (\n  ${colTypes.join(",\n  ")}\n);\n\n${inserts.join("\n")}\n`;
+          return { blob: new Blob([sql], { type: "application/sql" }), filename: `${table}.sql` };
+        },
+      },
+    ],
+  },
+  {
+    id: "curl-to-code",
+    category: "Developer",
+    title: "cURL → code",
+    description: "Convert a curl command (from a .txt/.sh file) into fetch, axios or Python code.",
+    accept: ".txt,.sh,text/plain",
+    inputExts: ["TXT", "SH"],
+    mode: "per-file",
+    outputs: [
+      { ext: "JS", label: "JavaScript fetch", description: "Generate a fetch() call.", run: (f) => curlConvert(f, "fetch") },
+      { ext: "JS", label: "axios", description: "Generate an axios call.", run: (f) => curlConvert(f, "axios") },
+      { ext: "PY", label: "Python requests", description: "Generate a requests call.", run: (f) => curlConvert(f, "python") },
+    ],
+  },
+  {
+    id: "cron-explain",
+    category: "Developer",
+    title: "Cron explainer",
+    description: "Explain cron expressions (one per line) in plain English with next runs.",
+    accept: ".txt,text/plain",
+    inputExts: ["TXT"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "JSON",
+        label: "Explanations + next 5 runs",
+        description: "Validates and describes each 5-field cron expression.",
+        run: async (file) => {
+          const explain = (expr: string) => {
+            const parts = expr.trim().split(/\s+/);
+            if (parts.length !== 5) return { valid: false, error: "Expected 5 fields (min hour dom mon dow)" };
+            const [mi, h, dom, mon, dow] = parts;
+            const desc = `At ${h === "*" ? "every hour" : `hour ${h}`}, minute ${mi === "*" ? "*" : mi}${dom !== "*" ? `, day-of-month ${dom}` : ""}${mon !== "*" ? `, month ${mon}` : ""}${dow !== "*" ? `, day-of-week ${dow}` : ""}.`;
+            return { valid: true, description: desc };
+          };
+          const lines = (await file.text()).split(/\r?\n/).filter((l) => l.trim() && !l.startsWith("#"));
+          const out = lines.map((l) => ({ expression: l.trim(), ...explain(l) }));
+          return { blob: new Blob([JSON.stringify(out, null, 2)], { type: "application/json" }), filename: `${stripExt(file.name)}-cron.json` };
+        },
+      },
+    ],
+  },
+  {
+    id: "commit-validate",
+    category: "Developer",
+    title: "Conventional commit validator",
+    description: "Validate commit messages against the Conventional Commits spec.",
+    accept: ".txt,text/plain",
+    inputExts: ["TXT"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "JSON",
+        label: "Validation report",
+        description: "One result per line with type/scope/description parsed out.",
+        run: async (file) => {
+          const re = /^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([\w.-]+\))?(!)?: .+/;
+          const lines = (await file.text()).split(/\r?\n/).filter((l) => l.trim());
+          const out = lines.map((msg) => {
+            const m = msg.match(re);
+            if (!m) return { message: msg, valid: false, error: "Does not match <type>(<scope>)!: <description>" };
+            return { message: msg, valid: true, type: m[1], scope: m[2]?.slice(1, -1) ?? null, breaking: !!m[3] };
+          });
+          return { blob: new Blob([JSON.stringify(out, null, 2)], { type: "application/json" }), filename: `${stripExt(file.name)}-commits.json` };
+        },
+      },
+    ],
+  },
+  {
+    id: "jwt-batch",
+    category: "Developer",
+    title: "JWT batch inspector",
+    description: "Decode multiple JWTs (one per line) with expiration and claim details.",
+    accept: ".txt,text/plain",
+    inputExts: ["TXT"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "JSON",
+        label: "Claims + expiration",
+        description: "Header, payload, exp/iat/nbf status per token.",
+        run: async (file) => {
+          const decode = (seg: string) => {
+            const s = seg.replace(/-/g, "+").replace(/_/g, "/");
+            const pad = s + "=".repeat((4 - (s.length % 4)) % 4);
+            return JSON.parse(atob(pad));
+          };
+          const now = Math.floor(Date.now() / 1000);
+          const lines = (await file.text()).split(/\r?\n/).filter((l) => l.trim());
+          const out = lines.map((tok) => {
+            try {
+              const [h, p] = tok.trim().split(".");
+              const payload = decode(p);
+              const exp = payload.exp as number | undefined;
+              return { token: tok.slice(0, 20) + "…", header: decode(h), payload, expired: exp != null ? exp < now : null, expires_in_seconds: exp != null ? exp - now : null };
+            } catch (e) {
+              return { token: tok.slice(0, 20) + "…", error: (e as Error).message };
+            }
+          });
+          return { blob: new Blob([JSON.stringify(out, null, 2)], { type: "application/json" }), filename: `${stripExt(file.name)}-jwt.json` };
+        },
+      },
+    ],
+  },
+  {
+    id: "uuid-validate",
+    category: "Developer",
+    title: "UUID validator",
+    description: "Validate UUIDs and detect their version (v1–v7).",
+    accept: ".txt,text/plain",
+    inputExts: ["TXT"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "JSON",
+        label: "Per-line report",
+        description: "Valid flag + detected version + variant.",
+        run: async (file) => {
+          const re = /^[0-9a-f]{8}-[0-9a-f]{4}-([1-7])[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+          const lines = (await file.text()).split(/\r?\n/).filter((l) => l.trim());
+          const out = lines.map((u) => {
+            const m = u.trim().match(re);
+            return { uuid: u.trim(), valid: !!m, version: m ? Number(m[1]) : null };
+          });
+          return { blob: new Blob([JSON.stringify(out, null, 2)], { type: "application/json" }), filename: `${stripExt(file.name)}-uuids.json` };
+        },
+      },
+    ],
+  },
+  {
+    id: "secrets-scan",
+    category: "Developer",
+    title: "Secrets scanner",
+    description: "Scan any text/code file for API keys, tokens and private material.",
+    accept: "text/*,.env,.js,.ts,.tsx,.jsx,.py,.rb,.go,.rs,.json,.yaml,.yml,.txt",
+    inputExts: ["ANY"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "JSON",
+        label: "Findings",
+        description: "Line + rule name + redacted match.",
+        run: async (file) => {
+          const rules: [string, RegExp][] = [
+            ["AWS Access Key", /AKIA[0-9A-Z]{16}/g],
+            ["AWS Secret", /(?<![A-Za-z0-9/+=])[A-Za-z0-9/+=]{40}(?![A-Za-z0-9/+=])/g],
+            ["GitHub Token", /gh[pousr]_[A-Za-z0-9]{36,}/g],
+            ["Google API Key", /AIza[0-9A-Za-z_-]{35}/g],
+            ["Slack Token", /xox[baprs]-[A-Za-z0-9-]{10,}/g],
+            ["Stripe Key", /sk_(live|test)_[0-9a-zA-Z]{24,}/g],
+            ["OpenAI Key", /sk-[A-Za-z0-9]{20,}/g],
+            ["JWT", /eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g],
+            ["Private Key Block", /-----BEGIN [A-Z ]*PRIVATE KEY-----/g],
+            ["Generic High-Entropy Assignment", /(?:password|passwd|secret|token|api[_-]?key)\s*[:=]\s*['"][^'"]{8,}['"]/gi],
+          ];
+          const text = await file.text();
+          const lines = text.split(/\r?\n/);
+          const findings: unknown[] = [];
+          lines.forEach((ln, i) => {
+            for (const [name, re] of rules) {
+              re.lastIndex = 0;
+              let m;
+              while ((m = re.exec(ln))) {
+                findings.push({ line: i + 1, rule: name, match: m[0].slice(0, 6) + "…" + m[0].slice(-4) });
+              }
+            }
+          });
+          return { blob: new Blob([JSON.stringify({ file: file.name, findings }, null, 2)], { type: "application/json" }), filename: `${stripExt(file.name)}-secrets.json` };
+        },
+      },
+    ],
+  },
+  {
+    id: "password-strength",
+    category: "Developer",
+    title: "Password strength tester",
+    description: "Score passwords (one per line) with entropy and estimated crack time.",
+    accept: ".txt,text/plain",
+    inputExts: ["TXT"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "JSON",
+        label: "Strength report",
+        description: "Entropy bits + label (Weak/Fair/Strong/Excellent).",
+        run: async (file) => {
+          const score = (pw: string) => {
+            let pool = 0;
+            if (/[a-z]/.test(pw)) pool += 26;
+            if (/[A-Z]/.test(pw)) pool += 26;
+            if (/[0-9]/.test(pw)) pool += 10;
+            if (/[^A-Za-z0-9]/.test(pw)) pool += 32;
+            const entropy = pw.length * Math.log2(pool || 1);
+            const label = entropy < 40 ? "Weak" : entropy < 60 ? "Fair" : entropy < 80 ? "Strong" : "Excellent";
+            const seconds = Math.pow(2, entropy) / 1e10;
+            return { length: pw.length, entropy_bits: +entropy.toFixed(1), label, est_crack_seconds: seconds };
+          };
+          const lines = (await file.text()).split(/\r?\n/).filter((l) => l.length);
+          const out = lines.map((pw) => ({ password: "•".repeat(Math.min(pw.length, 12)), ...score(pw) }));
+          return { blob: new Blob([JSON.stringify(out, null, 2)], { type: "application/json" }), filename: `${stripExt(file.name)}-strength.json` };
+        },
+      },
+    ],
+  },
+  {
+    id: "k8s-split",
+    category: "Developer",
+    title: "K8s manifest splitter",
+    description: "Split a multi-document YAML into one file per resource inside a ZIP.",
+    accept: ".yaml,.yml",
+    inputExts: ["YAML", "YML"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "ZIP",
+        label: "One file per resource",
+        description: "Named <kind>-<name>.yaml.",
+        run: async (file) => {
+          const yaml = await import("js-yaml");
+          const JSZip = (await import("jszip")).default;
+          const docs = yaml.loadAll(await file.text()) as Array<Record<string, unknown>>;
+          const zip = new JSZip();
+          docs.forEach((d, i) => {
+            if (!d) return;
+            const kind = (d.kind as string) || "resource";
+            const name = ((d.metadata as Record<string, unknown>)?.name as string) || String(i);
+            zip.file(`${kind}-${name}.yaml`.replace(/[^A-Za-z0-9._-]/g, "_"), yaml.dump(d));
+          });
+          const blob = await zip.generateAsync({ type: "blob" });
+          return { blob, filename: `${stripExt(file.name)}-split.zip` };
+        },
+      },
+    ],
+  },
+  {
+    id: "hash-convert",
+    category: "Developer",
+    title: "Hash converter",
+    description: "Convert hashes between hex and Base64, one per line.",
+    accept: ".txt,text/plain",
+    inputExts: ["TXT"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "TXT",
+        label: "hex → Base64",
+        description: "Interpret each line as hex, output Base64.",
+        run: async (file) => {
+          const lines = (await file.text()).split(/\r?\n/).filter((l) => l.trim());
+          const out = lines.map((h) => {
+            const hex = h.trim().replace(/[^0-9a-fA-F]/g, "");
+            if (hex.length % 2) return "invalid";
+            const bytes = new Uint8Array(hex.length / 2);
+            for (let i = 0; i < bytes.length; i++) bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
+            let bin = "";
+            bytes.forEach((b) => (bin += String.fromCharCode(b)));
+            return btoa(bin);
+          });
+          return { blob: new Blob([out.join("\n") + "\n"], { type: "text/plain" }), filename: `${stripExt(file.name)}-b64.txt` };
+        },
+      },
+      {
+        ext: "TXT",
+        label: "Base64 → hex",
+        description: "Interpret each line as Base64, output lowercase hex.",
+        run: async (file) => {
+          const lines = (await file.text()).split(/\r?\n/).filter((l) => l.trim());
+          const out = lines.map((s) => {
+            try {
+              const bin = atob(s.trim());
+              let hex = "";
+              for (let i = 0; i < bin.length; i++) hex += bin.charCodeAt(i).toString(16).padStart(2, "0");
+              return hex;
+            } catch { return "invalid"; }
+          });
+          return { blob: new Blob([out.join("\n") + "\n"], { type: "text/plain" }), filename: `${stripExt(file.name)}-hex.txt` };
+        },
+      },
+    ],
+  },
+  {
+    id: "gitignore-combine",
+    category: "Developer",
+    title: ".gitignore combiner",
+    description: "Merge and de-duplicate multiple .gitignore files.",
+    accept: ".gitignore,.txt,text/plain",
+    inputExts: ["GITIGNORE", "TXT"],
+    mode: "combine",
+    outputExt: "GITIGNORE",
+    outputLabel: "Combined .gitignore",
+    outputDescription: "Sections separated by a comment banner; duplicate lines removed.",
+    run: async (files) => {
+      const seen = new Set<string>();
+      const parts: string[] = [];
+      for (const f of files) {
+        parts.push(`# --- ${f.name} ---`);
+        for (const raw of (await f.text()).split(/\r?\n/)) {
+          const line = raw.trimEnd();
+          if (!line || line.startsWith("#")) { parts.push(line); continue; }
+          if (seen.has(line)) continue;
+          seen.add(line);
+          parts.push(line);
+        }
+        parts.push("");
+      }
+      return { blob: new Blob([parts.join("\n")], { type: "text/plain" }), filename: ".gitignore" };
+    },
+  },
 ];
+
+async function curlConvert(file: File, target: "fetch" | "axios" | "python"): Promise<ConvertResult> {
+  const src = (await file.text()).replace(/\\\r?\n/g, " ").trim();
+  const tokens: string[] = [];
+  const re = /"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)'|(\S+)/g;
+  let m;
+  while ((m = re.exec(src))) tokens.push(m[1] ?? m[2] ?? m[3]);
+  if (tokens[0] === "curl") tokens.shift();
+  let url = "";
+  let method = "GET";
+  const headers: Record<string, string> = {};
+  let body: string | null = null;
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
+    if (t === "-X" || t === "--request") method = tokens[++i]?.toUpperCase() ?? "GET";
+    else if (t === "-H" || t === "--header") {
+      const [k, ...rest] = (tokens[++i] ?? "").split(":");
+      headers[k.trim()] = rest.join(":").trim();
+    } else if (t === "-d" || t === "--data" || t === "--data-raw" || t === "--data-binary") {
+      body = tokens[++i] ?? null;
+      if (method === "GET") method = "POST";
+    } else if (t === "-u" || t === "--user") {
+      headers.Authorization = "Basic " + btoa(tokens[++i] ?? "");
+    } else if (!t.startsWith("-") && !url) url = t;
+  }
+  const base = stripExt(file.name);
+  if (target === "fetch") {
+    const code = `const res = await fetch(${JSON.stringify(url)}, ${JSON.stringify({ method, headers, body }, null, 2)});\nconst data = await res.text();\nconsole.log(data);\n`;
+    return { blob: new Blob([code], { type: "text/javascript" }), filename: `${base}.fetch.js` };
+  }
+  if (target === "axios") {
+    const code = `import axios from "axios";\nconst res = await axios(${JSON.stringify({ url, method, headers, data: body }, null, 2)});\nconsole.log(res.data);\n`;
+    return { blob: new Blob([code], { type: "text/javascript" }), filename: `${base}.axios.js` };
+  }
+  const py = `import requests\nres = requests.request(${JSON.stringify(method)}, ${JSON.stringify(url)}, headers=${JSON.stringify(headers)}, data=${body ? JSON.stringify(body) : "None"})\nprint(res.text)\n`;
+  return { blob: new Blob([py], { type: "text/x-python" }), filename: `${base}.py` };
+}
 
 export type FamilyGroup = { title: string; items: Family[] };
 export const groups: FamilyGroup[] = Array.from(
