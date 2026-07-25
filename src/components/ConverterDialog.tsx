@@ -94,7 +94,7 @@ const stripExt = (name: string) => {
 };
 
 
-export function ConverterDialog({ family, onClose }: Props) {
+export function ConverterDialog({ family, onClose, initialFiles }: Props) {
   const [items, setItems] = useState<QueueItem[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [outputIndex, setOutputIndex] = useState(0);
