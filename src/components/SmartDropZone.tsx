@@ -185,14 +185,14 @@ export function SmartDropZone({ onPick }: Props) {
                     type="search"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Filter tools or output format…"
+                    placeholder={t("smart.filter.placeholder")}
                     className="w-full rounded border border-transparent bg-transparent py-1.5 pl-8 pr-3 text-sm outline-none focus:border-foreground/20"
                   />
                 </div>
                 <div className="max-h-[420px] overflow-y-auto">
                   {filtered.length === 0 ? (
                     <div className="p-8 text-center text-sm text-muted-foreground">
-                      No To_olT tools match "{query}".
+                      {t("smart.none.query", { q: query })}
                     </div>
                   ) : (
                     <ul className="divide-y divide-foreground/5">
