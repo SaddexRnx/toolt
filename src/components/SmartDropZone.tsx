@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Upload, X, ArrowRight, FileIcon, Search } from "lucide-react";
 import { families, type Family } from "@/lib/converters";
+import { useT } from "@/lib/i18n";
 
 const getExt = (name: string) => {
   const m = name.match(/\.([^.]+)$/);
