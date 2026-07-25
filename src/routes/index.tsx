@@ -4,6 +4,7 @@ import { ArrowUpRight, ShieldCheck, Zap, Layers, Search } from "lucide-react";
 import { groups, families, type Family } from "@/lib/converters";
 import { ConverterDialog } from "@/components/ConverterDialog";
 import { SmartDropZone } from "@/components/SmartDropZone";
+import tooltLogo from "@/assets/toolt-logo.png.asset.json";
 
 export const Route = createFileRoute("/")({
   component: Home,
