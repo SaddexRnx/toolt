@@ -156,6 +156,7 @@ export function SmartDropZone({ onPick }: Props) {
               <div className="flex gap-1 overflow-x-auto border-b border-foreground/10 p-2 md:flex-col md:overflow-visible md:border-b-0 md:border-r">
                 {categories.map(([cat, count]) => {
                   const active = cat === activeCat;
+                  const label = cat === "All" ? t("catalog.category.all") : cat;
                   return (
                     <button
                       key={cat}
@@ -166,7 +167,7 @@ export function SmartDropZone({ onPick }: Props) {
                           : "text-foreground/70 hover:bg-foreground/5 hover:text-foreground"
                       }`}
                     >
-                      <span className="truncate">{cat}</span>
+                      <span className="truncate">{label}</span>
                       <span className={`font-mono text-[10px] ${active ? "opacity-70" : "opacity-50"}`}>
                         {count}
                       </span>
