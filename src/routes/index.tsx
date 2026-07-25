@@ -266,7 +266,7 @@ function Home() {
       {/* Footer */}
       <footer className="border-t border-foreground/10">
         <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-2 px-6 py-8 text-xs text-muted-foreground md:flex-row md:items-center">
-          <p>© {new Date().getFullYear()} monochrome. Built with open-source libraries.</p>
+          <p>© {new Date().getFullYear()} To_olT. Built with open-source libraries.</p>
           <p className="font-mono uppercase tracking-widest">no uploads · no tracking · no limits</p>
         </div>
       </footer>
