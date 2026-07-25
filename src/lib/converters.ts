@@ -4145,6 +4145,541 @@ export const families: Family[] = [
       return { blob: new Blob([parts.join("\n")], { type: "text/plain" }), filename: ".gitignore" };
     },
   },
+
+  // =========================================================================
+  // Text & Encoding tools — text-file in, text-file out
+  // =========================================================================
+  {
+    id: "url-encode-decode",
+    category: "Encoders",
+    title: "URL encode / decode",
+    description: "Percent-encode text for URLs, or decode a percent-encoded string.",
+    accept: ".txt,text/plain",
+    inputExts: ["TXT"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "TXT",
+        label: "URL-encoded",
+        description: "encodeURIComponent applied to the file text.",
+        run: async (file) => ({
+          blob: new Blob([encodeURIComponent(await file.text())], { type: "text/plain" }),
+          filename: `${stripExt(file.name)}.encoded.txt`,
+        }),
+      },
+      {
+        ext: "TXT",
+        label: "URL-decoded",
+        description: "decodeURIComponent applied to the file text.",
+        run: async (file) => {
+          const text = await file.text();
+          try {
+            return { blob: new Blob([decodeURIComponent(text)], { type: "text/plain" }), filename: `${stripExt(file.name)}.decoded.txt` };
+          } catch {
+            throw new Error("Input is not valid URL-encoded text.");
+          }
+        },
+      },
+    ],
+  },
+  {
+    id: "html-entities",
+    category: "Encoders",
+    title: "HTML entities encode / decode",
+    description: "Escape < > & \" ' to entities, or decode HTML entities back to text.",
+    accept: ".txt,.html,text/plain,text/html",
+    inputExts: ["TXT", "HTML"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "TXT",
+        label: "Encoded",
+        description: "Escape HTML special characters.",
+        run: async (file) => {
+          const map: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+          const out = (await file.text()).replace(/[&<>"']/g, (c) => map[c]);
+          return { blob: new Blob([out], { type: "text/plain" }), filename: `${stripExt(file.name)}.encoded.txt` };
+        },
+      },
+      {
+        ext: "TXT",
+        label: "Decoded",
+        description: "Decode named and numeric HTML entities.",
+        run: async (file) => {
+          const doc = new DOMParser().parseFromString(await file.text(), "text/html");
+          return { blob: new Blob([doc.documentElement.textContent ?? ""], { type: "text/plain" }), filename: `${stripExt(file.name)}.decoded.txt` };
+        },
+      },
+    ],
+  },
+  {
+    id: "binary-text",
+    category: "Encoders",
+    title: "Binary ↔ text",
+    description: "Convert text to 8-bit binary or decode space-separated binary back to text.",
+    accept: ".txt,text/plain",
+    inputExts: ["TXT"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "TXT",
+        label: "Text → binary",
+        description: "UTF-8 bytes as space-separated 8-bit binary.",
+        run: async (file) => {
+          const bytes = new TextEncoder().encode(await file.text());
+          const out = Array.from(bytes, (b) => b.toString(2).padStart(8, "0")).join(" ");
+          return { blob: new Blob([out], { type: "text/plain" }), filename: `${stripExt(file.name)}.bin.txt` };
+        },
+      },
+      {
+        ext: "TXT",
+        label: "Binary → text",
+        description: "Parse whitespace-separated 8-bit binary and decode UTF-8.",
+        run: async (file) => {
+          const tokens = (await file.text()).trim().split(/\s+/).filter(Boolean);
+          if (tokens.some((t) => !/^[01]{1,8}$/.test(t))) throw new Error("Input must be whitespace-separated binary bytes.");
+          const bytes = new Uint8Array(tokens.map((t) => parseInt(t, 2)));
+          return { blob: new Blob([new TextDecoder().decode(bytes)], { type: "text/plain" }), filename: `${stripExt(file.name)}.txt` };
+        },
+      },
+    ],
+  },
+  {
+    id: "hex-text",
+    category: "Encoders",
+    title: "Hex ↔ text",
+    description: "Convert text to hexadecimal or decode a hex string back to text.",
+    accept: ".txt,text/plain",
+    inputExts: ["TXT"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "TXT",
+        label: "Text → hex",
+        description: "UTF-8 bytes as lowercase hex, space-separated.",
+        run: async (file) => {
+          const bytes = new TextEncoder().encode(await file.text());
+          const out = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join(" ");
+          return { blob: new Blob([out], { type: "text/plain" }), filename: `${stripExt(file.name)}.hex.txt` };
+        },
+      },
+      {
+        ext: "TXT",
+        label: "Hex → text",
+        description: "Parse hex bytes (with or without spaces/0x) and decode UTF-8.",
+        run: async (file) => {
+          const clean = (await file.text()).replace(/0x/gi, "").replace(/[^0-9a-f]/gi, "");
+          if (clean.length % 2 !== 0) throw new Error("Hex input must have an even number of digits.");
+          const bytes = new Uint8Array(clean.length / 2);
+          for (let i = 0; i < bytes.length; i++) bytes[i] = parseInt(clean.substr(i * 2, 2), 16);
+          return { blob: new Blob([new TextDecoder().decode(bytes)], { type: "text/plain" }), filename: `${stripExt(file.name)}.txt` };
+        },
+      },
+    ],
+  },
+  {
+    id: "morse-code",
+    category: "Encoders",
+    title: "Morse code translator",
+    description: "Encode text to International Morse Code or decode Morse back to text.",
+    accept: ".txt,text/plain",
+    inputExts: ["TXT"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "TXT",
+        label: "Text → Morse",
+        description: "Letters separated by spaces, words by ' / '.",
+        run: async (file) => {
+          const M: Record<string, string> = { A:".-",B:"-...",C:"-.-.",D:"-..",E:".",F:"..-.",G:"--.",H:"....",I:"..",J:".---",K:"-.-",L:".-..",M:"--",N:"-.",O:"---",P:".--.",Q:"--.-",R:".-.",S:"...",T:"-",U:"..-",V:"...-",W:".--",X:"-..-",Y:"-.--",Z:"--..","0":"-----","1":".----","2":"..---","3":"...--","4":"....-","5":".....","6":"-....","7":"--...","8":"---..","9":"----.",".":".-.-.-",",":"--..--","?":"..--..","'":".----.","!":"-.-.--","/":"-..-.","(":"-.--.",")":"-.--.-","&":".-...",":":"---...",";":"-.-.-.","=":"-...-","+":".-.-.","-":"-....-","_":"..--.-",'"':".-..-.","$":"...-..-","@":".--.-." };
+          const out = (await file.text()).toUpperCase().split(/\s+/).map((w) => w.split("").map((c) => M[c] ?? "").filter(Boolean).join(" ")).join(" / ");
+          return { blob: new Blob([out], { type: "text/plain" }), filename: `${stripExt(file.name)}.morse.txt` };
+        },
+      },
+      {
+        ext: "TXT",
+        label: "Morse → text",
+        description: "Words separated by '/' or double space; letters by single space.",
+        run: async (file) => {
+          const M: Record<string, string> = { ".-":"A","-...":"B","-.-.":"C","-..":"D",".":"E","..-.":"F","--.":"G","....":"H","..":"I",".---":"J","-.-":"K",".-..":"L","--":"M","-.":"N","---":"O",".--.":"P","--.-":"Q",".-.":"R","...":"S","-":"T","..-":"U","...-":"V",".--":"W","-..-":"X","-.--":"Y","--..":"Z","-----":"0",".----":"1","..---":"2","...--":"3","....-":"4",".....":"5","-....":"6","--...":"7","---..":"8","----.":"9",".-.-.-":".","--..--":",","..--..":"?",".----.":"'","-.-.--":"!","-..-.":"/","-.--.":"(","-.--.-":")",".-...":"&","---...":":","-.-.-.":";","-...-":"=",".-.-.":"+","-....-":"-","..--.-":"_",".-..-.":'"',"...-..-":"$",".--.-.":"@" };
+          const out = (await file.text()).trim().split(/\s*\/\s*|\s{2,}/).map((w) => w.split(/\s+/).map((t) => M[t] ?? "").join("")).join(" ");
+          return { blob: new Blob([out], { type: "text/plain" }), filename: `${stripExt(file.name)}.txt` };
+        },
+      },
+    ],
+  },
+  {
+    id: "rot13",
+    category: "Encoders",
+    title: "ROT13 cipher",
+    description: "Apply the ROT13 substitution cipher (encode and decode are the same operation).",
+    accept: ".txt,text/plain",
+    inputExts: ["TXT"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "TXT",
+        label: "ROT13",
+        description: "Shift every ASCII letter by 13 places.",
+        run: async (file) => {
+          const out = (await file.text()).replace(/[a-zA-Z]/g, (c) => {
+            const base = c <= "Z" ? 65 : 97;
+            return String.fromCharCode(((c.charCodeAt(0) - base + 13) % 26) + base);
+          });
+          return { blob: new Blob([out], { type: "text/plain" }), filename: `${stripExt(file.name)}.rot13.txt` };
+        },
+      },
+    ],
+  },
+  {
+    id: "caesar-cipher",
+    category: "Encoders",
+    title: "Caesar cipher (shift 3)",
+    description: "Classic Caesar cipher with a fixed +3 shift; use the decode option to reverse.",
+    accept: ".txt,text/plain",
+    inputExts: ["TXT"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "TXT",
+        label: "Encode (+3)",
+        description: "Shift ASCII letters forward by 3.",
+        run: async (file) => {
+          const shift = (s: string, n: number) => s.replace(/[a-zA-Z]/g, (c) => {
+            const b = c <= "Z" ? 65 : 97;
+            return String.fromCharCode(((c.charCodeAt(0) - b + n + 26) % 26) + b);
+          });
+          return { blob: new Blob([shift(await file.text(), 3)], { type: "text/plain" }), filename: `${stripExt(file.name)}.caesar.txt` };
+        },
+      },
+      {
+        ext: "TXT",
+        label: "Decode (−3)",
+        description: "Shift ASCII letters backward by 3.",
+        run: async (file) => {
+          const shift = (s: string, n: number) => s.replace(/[a-zA-Z]/g, (c) => {
+            const b = c <= "Z" ? 65 : 97;
+            return String.fromCharCode(((c.charCodeAt(0) - b + n + 26) % 26) + b);
+          });
+          return { blob: new Blob([shift(await file.text(), -3)], { type: "text/plain" }), filename: `${stripExt(file.name)}.plain.txt` };
+        },
+      },
+    ],
+  },
+  {
+    id: "slugify",
+    category: "Text",
+    title: "Slugify URL",
+    description: "Convert any text into a clean, lowercase, URL-safe slug.",
+    accept: ".txt,text/plain",
+    inputExts: ["TXT"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "TXT",
+        label: "URL slug",
+        description: "Lowercased, ASCII-only, hyphen-separated.",
+        run: async (file) => {
+          const out = (await file.text())
+            .normalize("NFKD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, "");
+          return { blob: new Blob([out], { type: "text/plain" }), filename: `${stripExt(file.name)}.slug.txt` };
+        },
+      },
+    ],
+  },
+  {
+    id: "number-to-words",
+    category: "Text",
+    title: "Number to words",
+    description: "Convert integers (one per line) into their written English form.",
+    accept: ".txt,text/plain",
+    inputExts: ["TXT"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "TXT",
+        label: "English words",
+        description: "Supports integers up to 999,999,999,999,999.",
+        run: async (file) => {
+          const ones = ["","one","two","three","four","five","six","seven","eight","nine","ten","eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen"];
+          const tens = ["","","twenty","thirty","forty","fifty","sixty","seventy","eighty","ninety"];
+          const scales = ["","thousand","million","billion","trillion"];
+          const under1000 = (n: number): string => {
+            if (n === 0) return "";
+            if (n < 20) return ones[n];
+            if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 ? "-" + ones[n % 10] : "");
+            return ones[Math.floor(n / 100)] + " hundred" + (n % 100 ? " " + under1000(n % 100) : "");
+          };
+          const toWords = (num: number): string => {
+            if (num === 0) return "zero";
+            const neg = num < 0; num = Math.abs(num);
+            const parts: string[] = [];
+            let i = 0;
+            while (num > 0) {
+              const chunk = num % 1000;
+              if (chunk) parts.unshift(under1000(chunk) + (scales[i] ? " " + scales[i] : ""));
+              num = Math.floor(num / 1000); i++;
+            }
+            return (neg ? "negative " : "") + parts.join(" ");
+          };
+          const out = (await file.text()).split(/\r?\n/).map((line) => {
+            const s = line.trim();
+            if (!s) return "";
+            const n = Number(s);
+            if (!Number.isFinite(n) || !Number.isInteger(n)) return `[invalid: ${s}]`;
+            return toWords(n);
+          }).join("\n");
+          return { blob: new Blob([out], { type: "text/plain" }), filename: `${stripExt(file.name)}.words.txt` };
+        },
+      },
+    ],
+  },
+  {
+    id: "roman-numerals",
+    category: "Text",
+    title: "Roman numerals ↔ number",
+    description: "Convert integers 1–3999 to Roman numerals, or Roman numerals back to integers.",
+    accept: ".txt,text/plain",
+    inputExts: ["TXT"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "TXT",
+        label: "Number → Roman",
+        description: "One integer per line (1–3999).",
+        run: async (file) => {
+          const table: [number, string][] = [[1000,"M"],[900,"CM"],[500,"D"],[400,"CD"],[100,"C"],[90,"XC"],[50,"L"],[40,"XL"],[10,"X"],[9,"IX"],[5,"V"],[4,"IV"],[1,"I"]];
+          const toRoman = (n: number) => {
+            if (n < 1 || n > 3999) return `[out of range: ${n}]`;
+            let out = ""; for (const [v, s] of table) while (n >= v) { out += s; n -= v; } return out;
+          };
+          const out = (await file.text()).split(/\r?\n/).map((l) => {
+            const s = l.trim(); if (!s) return "";
+            const n = parseInt(s, 10); return Number.isFinite(n) ? toRoman(n) : `[invalid: ${s}]`;
+          }).join("\n");
+          return { blob: new Blob([out], { type: "text/plain" }), filename: `${stripExt(file.name)}.roman.txt` };
+        },
+      },
+      {
+        ext: "TXT",
+        label: "Roman → number",
+        description: "One numeral per line.",
+        run: async (file) => {
+          const V: Record<string, number> = { I:1,V:5,X:10,L:50,C:100,D:500,M:1000 };
+          const parse = (s: string) => {
+            let total = 0, prev = 0;
+            for (let i = s.length - 1; i >= 0; i--) { const v = V[s[i]]; if (!v) return NaN; if (v < prev) total -= v; else { total += v; prev = v; } }
+            return total;
+          };
+          const out = (await file.text()).split(/\r?\n/).map((l) => {
+            const s = l.trim().toUpperCase(); if (!s) return "";
+            const n = parse(s); return Number.isFinite(n) ? String(n) : `[invalid: ${s}]`;
+          }).join("\n");
+          return { blob: new Blob([out], { type: "text/plain" }), filename: `${stripExt(file.name)}.numbers.txt` };
+        },
+      },
+    ],
+  },
+  {
+    id: "text-statistics",
+    category: "Text",
+    title: "Text statistics report",
+    description: "Word, character, sentence, paragraph, line count and estimated reading time.",
+    accept: ".txt,.md,text/plain",
+    inputExts: ["TXT", "MD"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "TXT",
+        label: "Stats report",
+        description: "Plain-text summary of the input's readability metrics.",
+        run: async (file) => {
+          const t = await file.text();
+          const chars = t.length;
+          const charsNoSpaces = t.replace(/\s/g, "").length;
+          const words = (t.match(/\b[\w'-]+\b/g) ?? []).length;
+          const sentences = (t.match(/[.!?]+(?=\s|$)/g) ?? []).length;
+          const paragraphs = t.split(/\n\s*\n/).filter((p) => p.trim()).length;
+          const lines = t.split(/\r?\n/).length;
+          const wpm = 225;
+          const mins = words / wpm;
+          const readMin = Math.floor(mins);
+          const readSec = Math.round((mins - readMin) * 60);
+          const out = [
+            `Text statistics — ${file.name}`,
+            "-".repeat(40),
+            `Characters:            ${chars}`,
+            `Characters (no space): ${charsNoSpaces}`,
+            `Words:                 ${words}`,
+            `Sentences:             ${sentences}`,
+            `Paragraphs:            ${paragraphs}`,
+            `Lines:                 ${lines}`,
+            `Reading time (~225wpm): ${readMin}m ${readSec}s`,
+          ].join("\n");
+          return { blob: new Blob([out], { type: "text/plain" }), filename: `${stripExt(file.name)}.stats.txt` };
+        },
+      },
+    ],
+  },
+  {
+    id: "json-to-typescript",
+    category: "Developer",
+    title: "JSON → TypeScript interface",
+    description: "Generate a TypeScript interface from a sample JSON object.",
+    accept: ".json,application/json,text/plain",
+    inputExts: ["JSON", "TXT"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "TS",
+        label: "TypeScript interface",
+        description: "Root interface named 'Root'; nested objects get their own interfaces.",
+        run: async (file) => {
+          const data = JSON.parse(await file.text());
+          const interfaces: string[] = [];
+          const pascal = (s: string) => s.replace(/(^\w|_\w)/g, (m) => m.replace("_", "").toUpperCase());
+          const typeOf = (v: unknown, name: string): string => {
+            if (v === null) return "null";
+            if (Array.isArray(v)) {
+              if (!v.length) return "unknown[]";
+              const inner = typeOf(v[0], name);
+              return inner.includes(" ") ? `(${inner})[]` : `${inner}[]`;
+            }
+            if (typeof v === "object") {
+              const iname = pascal(name);
+              const lines = Object.entries(v as Record<string, unknown>).map(([k, val]) => `  ${JSON.stringify(k)}: ${typeOf(val, k)};`);
+              interfaces.push(`export interface ${iname} {\n${lines.join("\n")}\n}`);
+              return iname;
+            }
+            return typeof v;
+          };
+          typeOf(data, "Root");
+          return { blob: new Blob([interfaces.reverse().join("\n\n") + "\n"], { type: "text/typescript" }), filename: `${stripExt(file.name)}.ts` };
+        },
+      },
+    ],
+  },
+  {
+    id: "xml-prettify",
+    category: "Developer",
+    title: "XML prettify",
+    description: "Format and indent minified or messy XML for easy reading.",
+    accept: ".xml,application/xml,text/xml",
+    inputExts: ["XML"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "XML",
+        label: "Pretty XML",
+        description: "2-space indent, one node per line.",
+        run: async (file) => {
+          const src = (await file.text()).replace(/>\s+</g, "><").trim();
+          let indent = 0;
+          const out: string[] = [];
+          const tokens = src.split(/(?=<)|(?<=>)/).filter(Boolean);
+          for (const tok of tokens) {
+            if (/^<\/[^>]+>/.test(tok)) { indent = Math.max(0, indent - 1); out.push("  ".repeat(indent) + tok); }
+            else if (/^<[^!?][^>]*[^/]>$/.test(tok)) { out.push("  ".repeat(indent) + tok); indent++; }
+            else { out.push("  ".repeat(indent) + tok); }
+          }
+          return { blob: new Blob([out.join("\n")], { type: "application/xml" }), filename: `${stripExt(file.name)}.pretty.xml` };
+        },
+      },
+    ],
+  },
+  {
+    id: "markdown-to-html",
+    category: "Documents",
+    title: "Markdown → HTML",
+    description: "Convert Markdown (headings, lists, links, code, bold/italic) to a standalone HTML document.",
+    accept: ".md,.markdown,text/markdown,text/plain",
+    inputExts: ["MD", "MARKDOWN", "TXT"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "HTML",
+        label: "HTML document",
+        description: "Basic Markdown subset — good for previews, not full CommonMark.",
+        run: async (file) => {
+          const md = await file.text();
+          const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+          const lines = md.split(/\r?\n/);
+          const out: string[] = [];
+          let inCode = false, inList = false;
+          for (const raw of lines) {
+            if (raw.startsWith("```")) { if (inCode) { out.push("</code></pre>"); inCode = false; } else { out.push("<pre><code>"); inCode = true; } continue; }
+            if (inCode) { out.push(esc(raw)); continue; }
+            const h = raw.match(/^(#{1,6})\s+(.*)$/);
+            if (h) { if (inList) { out.push("</ul>"); inList = false; } out.push(`<h${h[1].length}>${inline(h[2])}</h${h[1].length}>`); continue; }
+            if (/^[-*]\s+/.test(raw)) { if (!inList) { out.push("<ul>"); inList = true; } out.push(`<li>${inline(raw.replace(/^[-*]\s+/, ""))}</li>`); continue; }
+            if (inList) { out.push("</ul>"); inList = false; }
+            if (raw.trim() === "") out.push("");
+            else out.push(`<p>${inline(raw)}</p>`);
+          }
+          if (inList) out.push("</ul>");
+          if (inCode) out.push("</code></pre>");
+          function inline(s: string) {
+            return esc(s)
+              .replace(/`([^`]+)`/g, "<code>$1</code>")
+              .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+              .replace(/\*([^*]+)\*/g, "<em>$1</em>")
+              .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+          }
+          const html = `<!doctype html>\n<html><head><meta charset="utf-8"><title>${esc(stripExt(file.name))}</title>\n<style>body{font-family:system-ui,sans-serif;max-width:720px;margin:2rem auto;padding:0 1rem;line-height:1.6}pre{background:#f4f4f5;padding:1rem;border-radius:6px;overflow:auto}code{font-family:ui-monospace,monospace}</style>\n</head><body>\n${out.join("\n")}\n</body></html>\n`;
+          return { blob: new Blob([html], { type: "text/html" }), filename: `${stripExt(file.name)}.html` };
+        },
+      },
+    ],
+  },
+  {
+    id: "text-case-converter",
+    category: "Text",
+    title: "Text case converter",
+    description: "Convert text between UPPER, lower, Title, Sentence, camelCase, snake_case, and kebab-case.",
+    accept: ".txt,text/plain",
+    inputExts: ["TXT"],
+    mode: "per-file",
+    outputs: [
+      { ext: "TXT", label: "UPPERCASE", description: "All characters uppercased.", run: async (f) => ({ blob: new Blob([(await f.text()).toUpperCase()], { type: "text/plain" }), filename: `${stripExt(f.name)}.upper.txt` }) },
+      { ext: "TXT", label: "lowercase", description: "All characters lowercased.", run: async (f) => ({ blob: new Blob([(await f.text()).toLowerCase()], { type: "text/plain" }), filename: `${stripExt(f.name)}.lower.txt` }) },
+      { ext: "TXT", label: "Title Case", description: "Capitalise the first letter of each word.", run: async (f) => ({ blob: new Blob([(await f.text()).toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())], { type: "text/plain" }), filename: `${stripExt(f.name)}.title.txt` }) },
+      { ext: "TXT", label: "Sentence case", description: "Capitalise the first letter of each sentence.", run: async (f) => ({ blob: new Blob([(await f.text()).toLowerCase().replace(/(^|[.!?]\s+)([a-z])/g, (_, p, c) => p + c.toUpperCase())], { type: "text/plain" }), filename: `${stripExt(f.name)}.sentence.txt` }) },
+      { ext: "TXT", label: "camelCase", description: "Words joined, first lowercase, rest capitalised.", run: async (f) => { const w = (await f.text()).match(/[A-Za-z0-9]+/g) ?? []; return { blob: new Blob([w.map((s, i) => i ? s[0].toUpperCase() + s.slice(1).toLowerCase() : s.toLowerCase()).join("")], { type: "text/plain" }), filename: `${stripExt(f.name)}.camel.txt` }; } },
+      { ext: "TXT", label: "snake_case", description: "Lowercase words joined by underscores.", run: async (f) => { const w = (await f.text()).match(/[A-Za-z0-9]+/g) ?? []; return { blob: new Blob([w.map((s) => s.toLowerCase()).join("_")], { type: "text/plain" }), filename: `${stripExt(f.name)}.snake.txt` }; } },
+      { ext: "TXT", label: "kebab-case", description: "Lowercase words joined by hyphens.", run: async (f) => { const w = (await f.text()).match(/[A-Za-z0-9]+/g) ?? []; return { blob: new Blob([w.map((s) => s.toLowerCase()).join("-")], { type: "text/plain" }), filename: `${stripExt(f.name)}.kebab.txt` }; } },
+    ],
+  },
+  {
+    id: "reverse-text",
+    category: "Text",
+    title: "Reverse text",
+    description: "Reverse characters, words, or line order.",
+    accept: ".txt,text/plain",
+    inputExts: ["TXT"],
+    mode: "per-file",
+    outputs: [
+      { ext: "TXT", label: "Reverse characters", description: "Reverse every character.", run: async (f) => ({ blob: new Blob([[...await f.text()].reverse().join("")], { type: "text/plain" }), filename: `${stripExt(f.name)}.reversed.txt` }) },
+      { ext: "TXT", label: "Reverse words", description: "Reverse word order within each line.", run: async (f) => ({ blob: new Blob([(await f.text()).split(/\r?\n/).map((l) => l.split(/\s+/).reverse().join(" ")).join("\n")], { type: "text/plain" }), filename: `${stripExt(f.name)}.words-reversed.txt` }) },
+      { ext: "TXT", label: "Reverse lines", description: "Reverse the order of lines in the file.", run: async (f) => ({ blob: new Blob([(await f.text()).split(/\r?\n/).reverse().join("\n")], { type: "text/plain" }), filename: `${stripExt(f.name)}.lines-reversed.txt` }) },
+    ],
+  },
+  {
+    id: "remove-duplicates",
+    category: "Text",
+    title: "Remove duplicate lines",
+    description: "Deduplicate lines in a text file. Optionally sort or trim whitespace.",
+    accept: ".txt,text/plain",
+    inputExts: ["TXT"],
+    mode: "per-file",
+    outputs: [
+      { ext: "TXT", label: "Unique lines", description: "Keep first occurrence, original order.", run: async (f) => { const seen = new Set<string>(); const out = (await f.text()).split(/\r?\n/).filter((l) => { if (seen.has(l)) return false; seen.add(l); return true; }).join("\n"); return { blob: new Blob([out], { type: "text/plain" }), filename: `${stripExt(f.name)}.unique.txt` }; } },
+      { ext: "TXT", label: "Unique + sorted", description: "Deduplicate then sort alphabetically.", run: async (f) => { const out = [...new Set((await f.text()).split(/\r?\n/))].sort().join("\n"); return { blob: new Blob([out], { type: "text/plain" }), filename: `${stripExt(f.name)}.unique-sorted.txt` }; } },
+    ],
+  },
 ];
 
 async function curlConvert(file: File, target: "fetch" | "axios" | "python"): Promise<ConvertResult> {
