@@ -1,0 +1,14 @@
+# To_olT
+
+> All-in-one browser-based file toolkit — convert, compress, merge, split, extract, format, hash, scan and generate PDFs, images, video, audio, documents, data and code. Everything runs locally in the browser: no uploads, no accounts, no limits.
+
+To_olT is a single-page web app that bundles 100+ file tools grouped into families (PDF, Images, Video, Audio, Documents, Spreadsheets, Data, Archives, Encoders, Hashes, JSON, YAML/TOML, HTML/CSS, SQL, Regex, JWT, UUID, Cron, Kubernetes, Git, Barcodes/QR, OCR, Background removal, Upscale, Secrets scanner). It uses open-source libraries such as pdf-lib, pdf.js, SheetJS, ffmpeg.wasm and tesseract.js.
+
+## Pages
+
+- [Home](/): Full catalog with smart drop zone, search and category filters for every tool.
+
+## Optional
+
+- [Sitemap](/sitemap.xml): XML sitemap of public routes.
+- [Robots](/robots.txt): Crawler rules.

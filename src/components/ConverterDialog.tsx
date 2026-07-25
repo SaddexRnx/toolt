@@ -669,6 +669,13 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
                       className="h-7 px-2 font-mono text-[11px]"
                       onClick={() => setPageRange(p)}
                       disabled={isRunning}
+                      aria-label={
+                        p === "all"
+                          ? "Select all pages"
+                          : p === "first"
+                            ? "Select first page only"
+                            : "Select pages 1 to 5"
+                      }
                     >
                       {p}
                     </Button>
@@ -697,6 +704,7 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
                     type="button"
                     className="underline underline-offset-2 hover:text-foreground"
                     onClick={() => setNameMode("timestamp")}
+                    aria-label="Resolve duplicates by adding a timestamp to filenames"
                   >
                     Add timestamp
                   </button>{" "}
@@ -705,6 +713,7 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
                     type="button"
                     className="underline underline-offset-2 hover:text-foreground"
                     onClick={() => setNameMode("suffix")}
+                    aria-label="Resolve duplicates by adding a suffix to filenames"
                   >
                     Add suffix
                   </button>{" "}
@@ -1137,7 +1146,7 @@ function Thumb({ item }: { item: QueueItem }) {
   if (item.preview) {
     return (
       <div className={box}>
-        <img src={item.preview} alt={`Preview of ${item.file.name}`} className="h-full w-full object-cover" />
+        <img src={item.preview} alt={`Thumbnail of ${item.file.name}`} className="h-full w-full object-cover" />
       </div>
     );
   }

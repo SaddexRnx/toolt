@@ -23,9 +23,43 @@ export const Route = createFileRoute("/")({
           "To_olT is the all-in-one browser toolkit: convert PDFs, images, video, audio, docs & data, plus format, hash, scan and generate — no uploads, no accounts, no limits.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://toolt.lovable.app/" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "To_olT — Every file tool, in your browser" },
       { name: "twitter:description", content: "To_olT — every file tool, in your browser. No uploads, no accounts, no limits." },
+    ],
+    links: [{ rel: "canonical", href: "https://toolt.lovable.app/" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "Organization",
+              name: "To_olT",
+              url: "https://toolt.lovable.app/",
+              logo: "https://toolt.lovable.app/favicon.png",
+            },
+            {
+              "@type": "WebSite",
+              name: "To_olT",
+              url: "https://toolt.lovable.app/",
+            },
+            {
+              "@type": "WebApplication",
+              name: "To_olT",
+              url: "https://toolt.lovable.app/",
+              applicationCategory: "UtilitiesApplication",
+              operatingSystem: "Windows, macOS, Linux, Android, iOS",
+              browserRequirements: "Requires JavaScript. Runs entirely in the browser.",
+              offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+              description:
+                "Browser-based all-in-one file toolkit: convert, compress, merge, split, extract, format, hash, scan and generate PDFs, images, video, audio, documents, data and code.",
+            },
+          ],
+        }),
+      },
     ],
   }),
 });
@@ -91,6 +125,7 @@ function Home() {
       </header>
 
       {/* Hero */}
+      <main>
       <section className="mx-auto max-w-6xl px-6 py-20 md:py-24">
         <h1 className="text-5xl font-semibold leading-[0.95] tracking-tight md:text-7xl">
           To_olT.
@@ -266,6 +301,8 @@ function Home() {
           ))
         )}
       </section>
+
+      </main>
 
       {/* Footer */}
       <footer className="border-t border-foreground/10">
