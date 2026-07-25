@@ -151,7 +151,8 @@ src/
 │   ├── calculators.ts      # Interactive tools
 │   ├── color-tools.ts
 │   ├── css-tools.ts
-│   ├── ffmpeg.ts           # Lazy FFmpeg loader
+│   ├── ffmpeg.ts           # Lazy FFmpeg loader + SHA-384 SRI check
+│   ├── limits.ts           # Cooldown, concurrency, file-size guards
 │   ├── preview.ts          # Thumbnails
 │   ├── history.ts          # IndexedDB
 │   ├── i18n.tsx            # 21 languages
@@ -186,6 +187,72 @@ no engines are downloaded until you actually convert something.
 - Respects `prefers-reduced-motion`.
 - **21 languages** with dynamic `<html lang>` and `dir="rtl"` support (Arabic, Hebrew).
 - SEO: unique `<title>`, meta description, Open Graph, Twitter cards, JSON-LD, `/sitemap.xml`, `/robots.txt`, `/llms.txt`.
+
+## Security
+
+To_olT has no backend, no database, no accounts, and no telemetry — the
+attack surface is intentionally tiny. Still, we harden the client where it
+matters:
+
+### CDN integrity (SRI)
+
+FFmpeg's ~30 MB WebAssembly core is fetched from `unpkg.com` at runtime.
+Every fetch is verified against a **pinned SHA-384 digest** (`src/lib/ffmpeg.ts`)
+before it is handed to the WASM loader — the browser refuses to execute
+tampered bytes if unpkg is ever compromised. This is the `fetch()`
+equivalent of an HTML `<script integrity>` attribute. To upgrade the pinned
+FFmpeg version, regenerate the digests:
+
+```bash
+curl -sfL https://unpkg.com/@ffmpeg/core@<version>/dist/umd/ffmpeg-core.js \
+  | openssl dgst -sha384 -binary | openssl base64 -A
+```
+
+### Client-side abuse guards (`src/lib/limits.ts`)
+
+There is no server to rate-limit, but a user (or a stuck key, or a bot
+open-sourcing the tab) can still crash their own browser. To_olT ships:
+
+- **Per-tool file-size caps** — oversize uploads are rejected up-front
+  with a translated, friendly error before any engine spins up.
+  Defaults per category (PDF 200 MB, Images 50 MB, Video 500 MB, AI 20 MB…),
+  with tighter overrides for the most memory-hungry tools (OCR, background
+  removal). Absolute ceiling: 2 GB.
+- **Debounce cooldown** on the Convert button (250 ms per tool) that
+  absorbs double-clicks and stuck keys.
+- **Concurrency limiter** on heavy engines — only one FFmpeg / Tesseract /
+  background-removal job runs at a time, even from a bulk queue. Prevents
+  memory blow-ups from parallel model loads.
+
+### Input handling
+
+- All conversions happen on your device — files are never uploaded, never
+  logged, never sent to a third party.
+- Text-input tools (JWT decoder, JSON formatter, URL parser…) validate
+  and bound their input on the client.
+- No `dangerouslySetInnerHTML` with user content.
+- No `eval`, no dynamic `Function()`, no arbitrary code execution.
+
+### Transport & headers
+
+- HTTPS-only in production.
+- No third-party trackers, analytics, or ad networks embedded.
+- `robots.txt`, `llms.txt`, and `sitemap.xml` are served directly from the
+  edge; they do not touch any private data.
+
+### Threat model — what To_olT does **not** protect against
+
+- **Malicious files you choose to open.** A crafted PDF/image could
+  exploit a browser or library bug. Use the app only with files you
+  trust. Consider running heavy jobs on a spare browser profile.
+- **Malicious browser extensions** in your own browser can read anything
+  the page can see. To_olT can't defend against that.
+- **A compromised device.** Local malware defeats any client-side app.
+
+If you find a vulnerability, please report it privately via Telegram
+[@Saddex_x](https://t.me/Saddex_x) before opening a public issue.
+
+
 
 ## Roadmap
 
