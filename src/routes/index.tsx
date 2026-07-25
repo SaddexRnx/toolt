@@ -125,6 +125,7 @@ function Home() {
       </header>
 
       {/* Hero */}
+      <main>
       <section className="mx-auto max-w-6xl px-6 py-20 md:py-24">
         <h1 className="text-5xl font-semibold leading-[0.95] tracking-tight md:text-7xl">
           To_olT.
