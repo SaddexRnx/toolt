@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Check, Copy } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -65,18 +66,22 @@ export function CalculatorDialog({ calc, onClose }: Props) {
                     )}
                     <span className="text-lg font-semibold tabular-nums break-all">{r.value}</span>
                     {r.hint && <span className="ml-1 text-xs text-muted-foreground">{r.hint}</span>}
+                    <CopyButton text={r.value} label={r.label} />
                   </span>
                 </div>
                 {r.swatches && r.swatches.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap items-center gap-1.5">
                     {r.swatches.map((c, j) => (
-                      <span
+                      <button
                         key={j}
-                        title={c}
-                        className="h-8 w-8 rounded border border-foreground/20"
+                        type="button"
+                        title={`Copy ${c}`}
+                        onClick={() => navigator.clipboard?.writeText(c)}
+                        className="h-8 w-8 rounded border border-foreground/20 transition hover:scale-110"
                         style={{ backgroundColor: c }}
                       />
                     ))}
+                    <CopyButton text={r.swatches.join(", ")} label="palette" compact />
                   </div>
                 )}
               </div>
@@ -119,5 +124,32 @@ function FieldRow({ field, value, onChange }: { field: CalcField; value: string;
         <Input type="text" value={value} placeholder={field.placeholder} onChange={(e) => onChange(e.target.value)} />
       )}
     </label>
+  );
+}
+
+function CopyButton({ text, label, compact }: { text: string; label?: string; compact?: boolean }) {
+  const [copied, setCopied] = useState(false);
+  const onCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch {
+      /* clipboard unavailable */
+    }
+  };
+  return (
+    <button
+      type="button"
+      onClick={onCopy}
+      aria-label={`Copy ${label ?? "value"}`}
+      title={copied ? "Copied!" : "Copy"}
+      className={
+        "inline-flex shrink-0 items-center justify-center rounded border border-foreground/15 bg-background text-muted-foreground transition hover:border-foreground/40 hover:text-foreground " +
+        (compact ? "h-6 w-6" : "h-7 w-7")
+      }
+    >
+      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+    </button>
   );
 }
