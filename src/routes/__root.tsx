@@ -77,14 +77,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "ToolT — Free browser-based file converter" },
+      { name: "description", content: "Convert PDF, images, spreadsheets, documents, data and archives — instantly, in your browser. No uploads, no accounts, no limits." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "ToolT — Free browser-based file converter" },
+      { property: "og:description", content: "Convert PDF, images, spreadsheets, documents, data and archives — instantly, in your browser. No uploads, no accounts, no limits." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "ToolT — Free browser-based file converter" },
+      { name: "twitter:description", content: "Convert PDF, images, spreadsheets, documents, data and archives — instantly, in your browser. No uploads, no accounts, no limits." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/e0f07071-96fb-4d39-bdca-2ac3bbaa4277/id-preview-864864f7--3a9ea568-876c-4838-9fd3-8b420cdacb92.lovable.app-1784965137307.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/e0f07071-96fb-4d39-bdca-2ac3bbaa4277/id-preview-864864f7--3a9ea568-876c-4838-9fd3-8b420cdacb92.lovable.app-1784965137307.png" },
     ],
     links: [
       {

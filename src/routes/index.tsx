@@ -9,17 +9,17 @@ export const Route = createFileRoute("/")({
   component: Home,
   head: () => ({
     meta: [
-      { title: "Monochrome — Free browser-based file converter" },
+      { title: "ToolT — Free browser-based file converter" },
       {
         name: "description",
         content:
           "Convert PDF, images, spreadsheets, documents, data and archives — instantly, in your browser. No uploads, no accounts, no limits.",
       },
-      { property: "og:title", content: "Monochrome — Free browser-based file converter" },
+      { property: "og:title", content: "ToolT — Free browser-based file converter" },
       {
         property: "og:description",
         content:
-          "Convert PDF, images, spreadsheets, documents, data and archives instantly in your browser. Private by design.",
+          "Convert PDF, images, spreadsheets, documents, data and archives — instantly, in your browser. No uploads, no accounts, no limits.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
