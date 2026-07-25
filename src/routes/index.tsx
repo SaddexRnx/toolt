@@ -166,64 +166,39 @@ function Home() {
       <section className="mx-auto max-w-6xl px-6 py-20 md:py-24">
         <div className="brand-rise mb-5 inline-flex items-center gap-2 rounded-full border border-foreground/15 px-3 py-1 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
           <span className="brand-dot-sm" aria-hidden />
-          Live · runs entirely in your browser
+          {t("hero.badge")}
         </div>
         <h1 className="brand-rise text-5xl font-semibold leading-[0.95] tracking-tight md:text-7xl">
           To_olT<span style={{ color: "var(--brand)" }}>.</span>
           <br />
-          <span className="text-muted-foreground">Every file tool. One page. Zero uploads.</span>
+          <span className="text-muted-foreground">{t("hero.title.suffix")}</span>
         </h1>
 
         <p className="mt-6 max-w-2xl text-base text-muted-foreground md:text-lg">
-          {total} tools · {totalOutputs} output formats. To_olT converts, compresses, merges, splits,
-          extracts, formats, hashes, scans and generates — PDFs, images, video, audio, documents,
-          data, code and config. Everything runs locally in your browser: no accounts, no uploads,
-          no limits.
+          {t("hero.desc", { tools: total, outputs: totalOutputs })}
         </p>
 
         <div className="mt-8 flex flex-wrap gap-1.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
           {[
-            "PDF",
-            "Images",
-            "Video",
-            "Audio",
-            "Documents",
-            "Spreadsheets",
-            "Data",
-            "Archives",
-            "Encoders",
-            "Hashes",
-            "JSON",
-            "YAML / TOML",
-            "HTML / CSS",
-            "SQL",
-            "Regex",
-            "JWT",
-            "UUID",
-            "Cron",
-            "Kubernetes",
-            "Git",
-            "Barcodes / QR",
-            "OCR",
-            "Background removal",
-            "Upscale",
-            "Secrets scanner",
-          ].map((t) => (
-            <span key={t} className="rounded border border-foreground/15 px-1.5 py-0.5">
-              {t}
+            "PDF","Images","Video","Audio","Documents","Spreadsheets","Data","Archives",
+            "Encoders","Hashes","JSON","YAML / TOML","HTML / CSS","SQL","Regex","JWT","UUID",
+            "Cron","Kubernetes","Git","Barcodes / QR","OCR","Background removal","Upscale","Secrets scanner",
+          ].map((tag) => (
+            <span key={tag} className="rounded border border-foreground/15 px-1.5 py-0.5">
+              {tag}
             </span>
           ))}
         </div>
 
         <div className="mt-10 grid grid-cols-1 gap-6 border-t border-foreground/10 pt-8 sm:grid-cols-3">
-          <Feature icon={<ShieldCheck className="h-4 w-4" />} title="Private by design">
-            Files never touch a server. Every byte is processed on your device.
+          <Feature icon={<ShieldCheck className="h-4 w-4" />} title={t("features.private.title")}>
+            {t("features.private.body")}
           </Feature>
-          <Feature icon={<Zap className="h-4 w-4" />} title="Instant & batchable">
-            Drop one file or a hundred. Preview, retry, rename, ZIP or download one-by-one.
+          <Feature icon={<Zap className="h-4 w-4" />} title={t("features.instant.title")}>
+            {t("features.instant.body")}
           </Feature>
-          <Feature icon={<Layers className="h-4 w-4" />} title="Open source stack">
-            pdf-lib, pdf.js, SheetJS, ffmpeg.wasm, tesseract.js and more. No API keys.
+          <Feature icon={<Layers className="h-4 w-4" />} title={t("features.oss.title")}>
+            {t("features.oss.body")}
           </Feature>
         </div>
       </section>
