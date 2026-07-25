@@ -2696,7 +2696,7 @@ export const families: Family[] = [
         label: "Palette JSON",
         description: "Dominant colour + top 8 palette entries as hex.",
         run: async (file) => {
-          const ColorThief = (await import("colorthief")).default as unknown as {
+          const ColorThief = (await import("colorthief")) as unknown as {
             new (): { getColor(img: HTMLImageElement): [number, number, number]; getPalette(img: HTMLImageElement, n: number): [number, number, number][] };
           };
           const img = new Image();
@@ -2723,7 +2723,7 @@ export const families: Family[] = [
         label: "Palette PNG",
         description: "Visual swatch strip of the top 8 colours.",
         run: async (file) => {
-          const ColorThief = (await import("colorthief")).default as unknown as {
+          const ColorThief = (await import("colorthief")) as unknown as {
             new (): { getPalette(img: HTMLImageElement, n: number): [number, number, number][] };
           };
           const img = new Image();
