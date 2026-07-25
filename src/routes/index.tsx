@@ -234,7 +234,7 @@ function Home() {
                 const count =
                   cat === "All"
                     ? total
-                    : groups.find((g) => g.title === cat)?.items.length ?? 0;
+                    : mergedGroups.find((g) => g.title === cat)?.items.length ?? 0;
                 return (
                   <button
                     key={cat}
