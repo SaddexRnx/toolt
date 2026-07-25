@@ -199,4 +199,27 @@ a[href*="lovable.dev"][target="_blank"] {
   animation: brand-rise 0.5s ease-out both;
 }
 
+/* Tool card — subtle lift + brand accent instead of full color inversion. */
+@utility tool-card {
+  position: relative;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  border: 1px solid transparent;
+}
+.tool-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--brand);
+  box-shadow: 0 6px 20px -12px var(--brand-soft);
+  z-index: 1;
+}
+.tool-card:focus-visible {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-soft);
+}
+@media (prefers-reduced-motion: reduce) {
+  .tool-card { transition: none; }
+  .tool-card:hover { transform: none; }
+}
+
+
 

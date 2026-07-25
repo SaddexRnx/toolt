@@ -103,11 +103,24 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   errorComponent: ErrorComponent,
 });
 
+// Inline pre-hydration script: apply saved theme + language BEFORE React
+// renders so light/dark and dir attributes are already correct on first paint.
+// This eliminates the light→dark flash and keeps SSR HTML consistent with
+// what the client will render after hydration.
+const NO_FLASH = `(() => { try {
+  var t = localStorage.getItem('toolt.theme');
+  if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  if (t === 'dark') document.documentElement.classList.add('dark');
+  var l = localStorage.getItem('toolt.lang');
+  if (l) { document.documentElement.lang = l; if (l === 'ar' || l === 'he' || l === 'fa') document.documentElement.dir = 'rtl'; }
+} catch(e){} })();`;
+
 function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
+        <script dangerouslySetInnerHTML={{ __html: NO_FLASH }} />
       </head>
       <body suppressHydrationWarning>
         {children}
