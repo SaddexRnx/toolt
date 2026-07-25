@@ -283,7 +283,32 @@ function Home() {
               </div>
 
               <div className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-foreground/10 bg-foreground/10 sm:grid-cols-2 lg:grid-cols-3">
-                {group.items.map((f) => {
+                {group.items.map((item) => {
+                  if (item.kind === "calc") {
+                    const c = item.calc;
+                    return (
+                      <button
+                        key={`calc-${c.id}`}
+                        onClick={() => openCalc(c)}
+                        className="group flex flex-col justify-between gap-6 bg-background p-6 text-left transition-colors hover:bg-foreground hover:text-background"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest">
+                            <span className="flex items-center gap-1 rounded border border-current px-1.5 py-0.5">
+                              <CalcIcon className="h-3 w-3" />
+                              Interactive
+                            </span>
+                          </div>
+                          <ArrowUpRight className="h-4 w-4 opacity-40 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:opacity-100" />
+                        </div>
+                        <div>
+                          <div className="text-base font-medium">{c.title}</div>
+                          <p className="mt-1 line-clamp-2 text-sm opacity-60">{c.description}</p>
+                        </div>
+                      </button>
+                    );
+                  }
+                  const f = item.family;
                   const outs = f.mode === "per-file" ? f.outputs.map((o) => o.ext) : [f.outputExt];
                   return (
                     <button
@@ -294,21 +319,12 @@ function Home() {
                       <div className="flex items-center justify-between">
                         <div className="flex flex-wrap items-center gap-1 font-mono text-[10px] uppercase tracking-widest">
                           {f.inputExts.slice(0, 3).map((e) => (
-                            <span key={e} className="rounded border border-current px-1.5 py-0.5">
-                              {e}
-                            </span>
+                            <span key={e} className="rounded border border-current px-1.5 py-0.5">{e}</span>
                           ))}
-                          {f.inputExts.length > 3 && (
-                            <span className="opacity-60">+{f.inputExts.length - 3}</span>
-                          )}
+                          {f.inputExts.length > 3 && <span className="opacity-60">+{f.inputExts.length - 3}</span>}
                           <span className="mx-1 opacity-40">→</span>
                           {outs.slice(0, 3).map((e) => (
-                            <span
-                              key={e}
-                              className="rounded bg-current px-1.5 py-0.5 text-background group-hover:text-foreground"
-                            >
-                              {e}
-                            </span>
+                            <span key={e} className="rounded bg-current px-1.5 py-0.5 text-background group-hover:text-foreground">{e}</span>
                           ))}
                           {outs.length > 3 && <span className="opacity-60">+{outs.length - 3}</span>}
                         </div>
@@ -323,6 +339,7 @@ function Home() {
                 })}
               </div>
             </div>
+
           ))
         )}
       </section>
