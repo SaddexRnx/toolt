@@ -70,11 +70,15 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
+  const t = useT();
   const [active, setActive] = useState<Family | null>(null);
   const [activeCalc, setActiveCalc] = useState<Calculator | null>(null);
   const [initialFiles, setInitialFiles] = useState<File[] | null>(null);
   const [category, setCategory] = useState<string>("All");
   const [query, setQuery] = useState("");
+  // Compute year on client only to avoid SSR/client mismatch across year rollovers.
+  const [year, setYear] = useState<number | null>(null);
+  useEffect(() => setYear(new Date().getFullYear()), []);
 
   const total = families.length + calculators.length;
   const totalOutputs =
