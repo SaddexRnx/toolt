@@ -69,36 +69,55 @@ export const Route = createFileRoute("/")({
 
 function Home() {
   const [active, setActive] = useState<Family | null>(null);
+  const [activeCalc, setActiveCalc] = useState<Calculator | null>(null);
   const [initialFiles, setInitialFiles] = useState<File[] | null>(null);
   const [category, setCategory] = useState<string>("All");
   const [query, setQuery] = useState("");
 
-  const total = families.length;
-  const totalOutputs = families.reduce(
-    (n, f) => n + (f.mode === "per-file" ? f.outputs.length : 1),
-    0,
-  );
+  const total = families.length + calculators.length;
+  const totalOutputs =
+    families.reduce((n, f) => n + (f.mode === "per-file" ? f.outputs.length : 1), 0) +
+    calculators.length;
 
-  const categories = useMemo(() => ["All", ...groups.map((g) => g.title)], []);
+  // Merge converter families and calculators into a unified item list per category.
+  type CatalogItem =
+    | { kind: "family"; family: Family }
+    | { kind: "calc"; calc: Calculator };
+
+  const mergedGroups = useMemo(() => {
+    const map = new Map<string, CatalogItem[]>();
+    for (const g of groups) map.set(g.title, g.items.map((f) => ({ kind: "family" as const, family: f })));
+    for (const c of calculators) {
+      const arr = map.get(c.category) ?? [];
+      arr.push({ kind: "calc", calc: c });
+      map.set(c.category, arr);
+    }
+    return Array.from(map, ([title, items]) => ({ title, items }));
+  }, []);
+
+  const categories = useMemo(() => ["All", ...mergedGroups.map((g) => g.title)], [mergedGroups]);
 
   const filteredGroups = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return groups
+    return mergedGroups
       .filter((g) => category === "All" || g.title === category)
       .map((g) => ({
         ...g,
-        items: g.items.filter((f) => {
+        items: g.items.filter((item) => {
           if (!q) return true;
-          if (f.title.toLowerCase().includes(q)) return true;
-          if (f.description.toLowerCase().includes(q)) return true;
-          if (f.inputExts.some((e) => e.toLowerCase().includes(q))) return true;
-          const outs = f.mode === "per-file" ? f.outputs.map((o) => o.ext) : [f.outputExt];
-          if (outs.some((e) => e.toLowerCase().includes(q))) return true;
-          return false;
+          if (item.kind === "family") {
+            const f = item.family;
+            if (f.title.toLowerCase().includes(q)) return true;
+            if (f.description.toLowerCase().includes(q)) return true;
+            if (f.inputExts.some((e) => e.toLowerCase().includes(q))) return true;
+            const outs = f.mode === "per-file" ? f.outputs.map((o) => o.ext) : [f.outputExt];
+            return outs.some((e) => e.toLowerCase().includes(q));
+          }
+          return item.calc.title.toLowerCase().includes(q) || item.calc.description.toLowerCase().includes(q);
         }),
       }))
       .filter((g) => g.items.length > 0);
-  }, [category, query]);
+  }, [mergedGroups, category, query]);
 
   const totalFiltered = filteredGroups.reduce((n, g) => n + g.items.length, 0);
 
@@ -106,11 +125,14 @@ function Home() {
     setInitialFiles(files && files.length > 0 ? files : null);
     setActive(family);
   };
+  const openCalc = (c: Calculator) => setActiveCalc(c);
 
   const close = () => {
     setActive(null);
     setInitialFiles(null);
   };
+  const closeCalc = () => setActiveCalc(null);
+
 
   return (
     <div className="min-h-screen bg-background text-foreground">
