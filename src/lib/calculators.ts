@@ -7,7 +7,7 @@ export type CalcField =
   | { id: string; label: string; type: "date"; default?: string }
   | { id: string; label: string; type: "textarea"; default?: string; placeholder?: string };
 
-export type CalcResult = { label: string; value: string; hint?: string };
+export type CalcResult = { label: string; value: string; hint?: string; swatch?: string; swatches?: string[] };
 
 export type Calculator = {
   id: string;
