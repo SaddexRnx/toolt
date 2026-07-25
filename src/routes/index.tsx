@@ -321,7 +321,8 @@ function Home() {
                     );
                   }
                   const f = item.family;
-                  const outs = f.mode === "per-file" ? f.outputs.map((o) => o.ext) : [f.outputExt];
+                  const outs = Array.from(new Set(f.mode === "per-file" ? f.outputs.map((o) => o.ext) : [f.outputExt]));
+                  const ins = Array.from(new Set(f.inputExts));
                   return (
                     <button
                       key={f.id}
@@ -330,16 +331,17 @@ function Home() {
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex flex-wrap items-center gap-1 font-mono text-[10px] uppercase tracking-widest">
-                          {f.inputExts.slice(0, 3).map((e) => (
-                            <span key={e} className="rounded border border-current px-1.5 py-0.5">{e}</span>
+                          {ins.slice(0, 3).map((e) => (
+                            <span key={`in-${e}`} className="rounded border border-current px-1.5 py-0.5">{e}</span>
                           ))}
-                          {f.inputExts.length > 3 && <span className="opacity-60">+{f.inputExts.length - 3}</span>}
+                          {ins.length > 3 && <span className="opacity-60">+{ins.length - 3}</span>}
                           <span className="mx-1 opacity-40">→</span>
                           {outs.slice(0, 3).map((e) => (
-                            <span key={e} className="rounded bg-current px-1.5 py-0.5 text-background group-hover:text-foreground">{e}</span>
+                            <span key={`out-${e}`} className="rounded bg-current px-1.5 py-0.5 text-background group-hover:text-foreground">{e}</span>
                           ))}
                           {outs.length > 3 && <span className="opacity-60">+{outs.length - 3}</span>}
                         </div>
+
                         <ArrowUpRight className="h-4 w-4 opacity-40 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:opacity-100" />
                       </div>
                       <div>
