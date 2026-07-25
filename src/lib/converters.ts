@@ -3071,6 +3071,499 @@ export const families: Family[] = [
       },
     ],
   },
+
+  // ============================================================
+  // JSON / TYPES / TABLES
+  // ============================================================
+  {
+    id: "json-to-typescript",
+    category: "Data",
+    title: "JSON → TypeScript",
+    description: "Generate a TypeScript interface (or Go struct) from a JSON sample.",
+    accept: ".json,application/json",
+    inputExts: ["JSON"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "TS",
+        label: "TypeScript interface",
+        description: "Root type is `Root`; nested objects become their own interfaces.",
+        run: async (file) => {
+          const data = JSON.parse(await file.text());
+          const out: string[] = [];
+          const seen = new Map<string, string>();
+          const pascal = (s: string) => s.replace(/(^|[_\-\s])([a-z])/g, (_, __, c) => c.toUpperCase()).replace(/[^A-Za-z0-9]/g, "") || "T";
+          const typeOf = (v: unknown, name: string): string => {
+            if (v === null) return "null";
+            if (Array.isArray(v)) return v.length ? `${typeOf(v[0], name)}[]` : "unknown[]";
+            if (typeof v === "object") {
+              const key = JSON.stringify(Object.keys(v as object).sort());
+              if (seen.has(key)) return seen.get(key)!;
+              const iface = pascal(name);
+              seen.set(key, iface);
+              const lines = Object.entries(v as Record<string, unknown>).map(
+                ([k, val]) => `  ${/^[A-Za-z_$][\w$]*$/.test(k) ? k : JSON.stringify(k)}: ${typeOf(val, k)};`,
+              );
+              out.push(`export interface ${iface} {\n${lines.join("\n")}\n}`);
+              return iface;
+            }
+            return typeof v;
+          };
+          const root = typeOf(data, "Root");
+          const body = out.join("\n\n") + (out.length ? "" : `export type Root = ${root};`);
+          return { blob: new Blob([body + "\n"], { type: "text/plain" }), filename: `${stripExt(file.name)}.ts` };
+        },
+      },
+      {
+        ext: "GO",
+        label: "Go struct",
+        description: "Root Go struct with capitalised exported fields.",
+        run: async (file) => {
+          const data = JSON.parse(await file.text());
+          const out: string[] = [];
+          const seen = new Set<string>();
+          const pascal = (s: string) => s.replace(/(^|[_\-\s])([a-z])/g, (_, __, c) => c.toUpperCase()).replace(/[^A-Za-z0-9]/g, "") || "T";
+          const goType = (v: unknown, name: string): string => {
+            if (v === null) return "interface{}";
+            if (Array.isArray(v)) return "[]" + (v.length ? goType(v[0], name) : "interface{}");
+            if (typeof v === "object") {
+              const iface = pascal(name);
+              if (!seen.has(iface)) {
+                seen.add(iface);
+                const lines = Object.entries(v as Record<string, unknown>).map(
+                  ([k, val]) => `\t${pascal(k)} ${goType(val, k)} \`json:"${k}"\``,
+                );
+                out.push(`type ${iface} struct {\n${lines.join("\n")}\n}`);
+              }
+              return iface;
+            }
+            if (typeof v === "number") return Number.isInteger(v) ? "int" : "float64";
+            if (typeof v === "boolean") return "bool";
+            return "string";
+          };
+          goType(data, "Root");
+          return { blob: new Blob([out.join("\n\n") + "\n"], { type: "text/plain" }), filename: `${stripExt(file.name)}.go` };
+        },
+      },
+    ],
+  },
+  {
+    id: "json-to-table",
+    category: "Data",
+    title: "JSON → Table",
+    description: "Convert a JSON array of objects into Markdown or HTML tables.",
+    accept: ".json,application/json",
+    inputExts: ["JSON"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "MD",
+        label: "Markdown table",
+        description: "GitHub-flavored markdown table.",
+        run: async (file) => {
+          const data = JSON.parse(await file.text());
+          if (!Array.isArray(data)) throw new Error("Root must be an array of objects.");
+          const cols = Array.from(new Set(data.flatMap((r) => Object.keys(r ?? {}))));
+          const esc = (v: unknown) => String(v ?? "").replace(/\|/g, "\\|").replace(/\n/g, " ");
+          const header = `| ${cols.join(" | ")} |\n| ${cols.map(() => "---").join(" | ")} |`;
+          const rows = data.map((r) => `| ${cols.map((c) => esc((r as Record<string, unknown>)[c])).join(" | ")} |`);
+          return { blob: new Blob([header + "\n" + rows.join("\n") + "\n"], { type: "text/markdown" }), filename: `${stripExt(file.name)}.md` };
+        },
+      },
+      {
+        ext: "HTML",
+        label: "HTML table",
+        description: "Standalone HTML with a `<table>`.",
+        run: async (file) => {
+          const data = JSON.parse(await file.text());
+          if (!Array.isArray(data)) throw new Error("Root must be an array of objects.");
+          const cols = Array.from(new Set(data.flatMap((r) => Object.keys(r ?? {}))));
+          const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+          const head = `<tr>${cols.map((c) => `<th>${esc(c)}</th>`).join("")}</tr>`;
+          const rows = data.map((r) => `<tr>${cols.map((c) => `<td>${esc(String((r as Record<string, unknown>)[c] ?? ""))}</td>`).join("")}</tr>`);
+          const html = `<!doctype html><meta charset="utf-8"><table border="1" cellspacing="0" cellpadding="4">${head}${rows.join("")}</table>`;
+          return { blob: new Blob([html], { type: "text/html" }), filename: `${stripExt(file.name)}.html` };
+        },
+      },
+    ],
+  },
+  {
+    id: "json-diff",
+    category: "Data",
+    title: "JSON diff",
+    description: "Compare two JSON files line-by-line and produce a unified diff.",
+    accept: ".json,application/json",
+    inputExts: ["JSON"],
+    mode: "combine",
+    outputExt: "DIFF",
+    outputLabel: "Unified diff",
+    outputDescription: "Drop exactly two JSON files; output is a text diff.",
+    run: async (files) => {
+      if (files.length !== 2) throw new Error("Drop exactly 2 JSON files to diff.");
+      const norm = async (f: File) => JSON.stringify(JSON.parse(await f.text()), null, 2).split("\n");
+      const [a, b] = await Promise.all([norm(files[0]), norm(files[1])]);
+      // LCS-based diff
+      const m = a.length, n = b.length;
+      const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+      for (let i = m - 1; i >= 0; i--) for (let j = n - 1; j >= 0; j--)
+        dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+      const out: string[] = [`--- ${files[0].name}`, `+++ ${files[1].name}`];
+      let i = 0, j = 0;
+      while (i < m && j < n) {
+        if (a[i] === b[j]) { out.push(`  ${a[i]}`); i++; j++; }
+        else if (dp[i + 1][j] >= dp[i][j + 1]) { out.push(`- ${a[i++]}`); }
+        else { out.push(`+ ${b[j++]}`); }
+      }
+      while (i < m) out.push(`- ${a[i++]}`);
+      while (j < n) out.push(`+ ${b[j++]}`);
+      return { blob: new Blob([out.join("\n") + "\n"], { type: "text/plain" }), filename: "diff.diff" };
+    },
+  },
+  {
+    id: "text-diff",
+    category: "Documents",
+    title: "Text diff",
+    description: "Line-by-line unified diff between two text files.",
+    accept: ".txt,.md,.log,.csv,.html,.css,.js,.ts,text/*",
+    inputExts: ["TXT", "MD", "LOG", "CSV", "HTML", "CSS", "JS", "TS", "JSON", "XML", "YAML", "YML"],
+    mode: "combine",
+    outputExt: "DIFF",
+    outputLabel: "Unified diff",
+    outputDescription: "Drop exactly two text files; output shows -/+ lines.",
+    run: async (files) => {
+      if (files.length !== 2) throw new Error("Drop exactly 2 text files to diff.");
+      const [a, b] = await Promise.all(files.map((f) => f.text().then((t) => t.split(/\r?\n/))));
+      const m = a.length, n = b.length;
+      const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+      for (let i = m - 1; i >= 0; i--) for (let j = n - 1; j >= 0; j--)
+        dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+      const out: string[] = [`--- ${files[0].name}`, `+++ ${files[1].name}`];
+      let i = 0, j = 0;
+      while (i < m && j < n) {
+        if (a[i] === b[j]) { out.push(`  ${a[i]}`); i++; j++; }
+        else if (dp[i + 1][j] >= dp[i][j + 1]) { out.push(`- ${a[i++]}`); }
+        else { out.push(`+ ${b[j++]}`); }
+      }
+      while (i < m) out.push(`- ${a[i++]}`);
+      while (j < n) out.push(`+ ${b[j++]}`);
+      return { blob: new Blob([out.join("\n") + "\n"], { type: "text/plain" }), filename: "diff.diff" };
+    },
+  },
+
+  // ============================================================
+  // HTML / CSS / SVG
+  // ============================================================
+  {
+    id: "html-tools",
+    category: "Documents",
+    title: "HTML formatter / minifier",
+    description: "Prettify, minify, or strip tags from an HTML file.",
+    accept: ".html,.htm,text/html",
+    inputExts: ["HTML", "HTM"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "HTML",
+        label: "Prettify",
+        description: "Re-indent HTML with 2-space padding.",
+        run: async (file) => {
+          const src = await file.text();
+          const voids = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"]);
+          const tokens = src.replace(/>\s+</g, "><").match(/<[^>]+>|[^<]+/g) ?? [];
+          let depth = 0;
+          const out: string[] = [];
+          for (const t of tokens) {
+            if (t.startsWith("<!") || t.startsWith("<?")) { out.push("  ".repeat(depth) + t.trim()); continue; }
+            if (t.startsWith("</")) { depth = Math.max(0, depth - 1); out.push("  ".repeat(depth) + t.trim()); continue; }
+            if (t.startsWith("<")) {
+              const name = (t.match(/^<\s*([a-zA-Z0-9-]+)/) || [])[1]?.toLowerCase() ?? "";
+              out.push("  ".repeat(depth) + t.trim());
+              if (!voids.has(name) && !t.endsWith("/>")) depth++;
+              continue;
+            }
+            const txt = t.trim();
+            if (txt) out.push("  ".repeat(depth) + txt);
+          }
+          return { blob: new Blob([out.join("\n") + "\n"], { type: "text/html" }), filename: `${stripExt(file.name)}.pretty.html` };
+        },
+      },
+      {
+        ext: "HTML",
+        label: "Minify",
+        description: "Collapse whitespace and strip comments.",
+        run: async (file) => {
+          const src = (await file.text())
+            .replace(/<!--[\s\S]*?-->/g, "")
+            .replace(/>\s+</g, "><")
+            .replace(/\s{2,}/g, " ")
+            .trim();
+          return { blob: new Blob([src], { type: "text/html" }), filename: `${stripExt(file.name)}.min.html` };
+        },
+      },
+      {
+        ext: "TXT",
+        label: "Strip tags → text",
+        description: "Extract visible text content only.",
+        run: async (file) => {
+          const doc = new DOMParser().parseFromString(await file.text(), "text/html");
+          doc.querySelectorAll("script,style,noscript").forEach((el) => el.remove());
+          const text = (doc.body?.textContent ?? "").replace(/\s+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+          return { blob: new Blob([text + "\n"], { type: "text/plain" }), filename: `${stripExt(file.name)}.txt` };
+        },
+      },
+      {
+        ext: "JSON",
+        label: "Tag counts",
+        description: "Frequency of every HTML element in the document.",
+        run: async (file) => {
+          const doc = new DOMParser().parseFromString(await file.text(), "text/html");
+          const counts: Record<string, number> = {};
+          doc.querySelectorAll("*").forEach((el) => {
+            const tag = el.tagName.toLowerCase();
+            counts[tag] = (counts[tag] ?? 0) + 1;
+          });
+          const sorted = Object.fromEntries(Object.entries(counts).sort((a, b) => b[1] - a[1]));
+          return { blob: new Blob([JSON.stringify(sorted, null, 2)], { type: "application/json" }), filename: `${stripExt(file.name)}-tags.json` };
+        },
+      },
+    ],
+  },
+  {
+    id: "html-extract",
+    category: "Documents",
+    title: "HTML link / image extractor",
+    description: "Pull every URL, image src, or meta tag out of an HTML document.",
+    accept: ".html,.htm,text/html",
+    inputExts: ["HTML", "HTM"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "TXT",
+        label: "All links",
+        description: "One `<a href>` URL per line, deduplicated.",
+        run: async (file) => {
+          const doc = new DOMParser().parseFromString(await file.text(), "text/html");
+          const set = new Set<string>();
+          doc.querySelectorAll("a[href]").forEach((a) => set.add((a as HTMLAnchorElement).getAttribute("href") ?? ""));
+          return { blob: new Blob([Array.from(set).filter(Boolean).join("\n") + "\n"], { type: "text/plain" }), filename: `${stripExt(file.name)}-links.txt` };
+        },
+      },
+      {
+        ext: "TXT",
+        label: "All images",
+        description: "One `<img src>` URL per line, deduplicated.",
+        run: async (file) => {
+          const doc = new DOMParser().parseFromString(await file.text(), "text/html");
+          const set = new Set<string>();
+          doc.querySelectorAll("img[src]").forEach((a) => set.add((a as HTMLImageElement).getAttribute("src") ?? ""));
+          return { blob: new Blob([Array.from(set).filter(Boolean).join("\n") + "\n"], { type: "text/plain" }), filename: `${stripExt(file.name)}-images.txt` };
+        },
+      },
+      {
+        ext: "JSON",
+        label: "Meta tags",
+        description: "All `<meta>` name/property + content as JSON.",
+        run: async (file) => {
+          const doc = new DOMParser().parseFromString(await file.text(), "text/html");
+          const out: Record<string, string> = {};
+          doc.querySelectorAll("meta").forEach((m) => {
+            const key = m.getAttribute("name") ?? m.getAttribute("property") ?? m.getAttribute("http-equiv");
+            const val = m.getAttribute("content");
+            if (key && val) out[key] = val;
+          });
+          return { blob: new Blob([JSON.stringify(out, null, 2)], { type: "application/json" }), filename: `${stripExt(file.name)}-meta.json` };
+        },
+      },
+    ],
+  },
+  {
+    id: "css-tools",
+    category: "Documents",
+    title: "CSS formatter / minifier",
+    description: "Prettify or minify CSS and strip vendor prefixes.",
+    accept: ".css,text/css",
+    inputExts: ["CSS"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "CSS",
+        label: "Prettify",
+        description: "One declaration per line, 2-space indent.",
+        run: async (file) => {
+          const src = (await file.text()).replace(/\/\*[\s\S]*?\*\//g, "");
+          const out = src
+            .replace(/\s*\{\s*/g, " {\n  ")
+            .replace(/;\s*/g, ";\n  ")
+            .replace(/\s*\}\s*/g, "\n}\n")
+            .replace(/\n {2}\}/g, "\n}")
+            .replace(/\n\s*\n/g, "\n")
+            .trim();
+          return { blob: new Blob([out + "\n"], { type: "text/css" }), filename: `${stripExt(file.name)}.pretty.css` };
+        },
+      },
+      {
+        ext: "CSS",
+        label: "Minify",
+        description: "Strip whitespace and comments.",
+        run: async (file) => {
+          const src = (await file.text())
+            .replace(/\/\*[\s\S]*?\*\//g, "")
+            .replace(/\s*([{}:;,>+~])\s*/g, "$1")
+            .replace(/;}/g, "}")
+            .replace(/\s{2,}/g, " ")
+            .trim();
+          return { blob: new Blob([src], { type: "text/css" }), filename: `${stripExt(file.name)}.min.css` };
+        },
+      },
+      {
+        ext: "CSS",
+        label: "Strip vendor prefixes",
+        description: "Removes -webkit-, -moz-, -ms- and -o- prefixed rules.",
+        run: async (file) => {
+          const src = (await file.text()).replace(/^\s*-(webkit|moz|ms|o)-[^;}]+;?\s*$/gm, "").replace(/\n\s*\n/g, "\n");
+          return { blob: new Blob([src], { type: "text/css" }), filename: `${stripExt(file.name)}.unprefixed.css` };
+        },
+      },
+    ],
+  },
+  {
+    id: "svg-minify",
+    category: "Images",
+    title: "SVG minify",
+    description: "Strip comments, XML prolog and needless whitespace from an SVG file.",
+    accept: ".svg,image/svg+xml",
+    inputExts: ["SVG"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "SVG",
+        label: "Minified SVG",
+        description: "Compact SVG suitable for inline use.",
+        run: async (file) => {
+          const src = (await file.text())
+            .replace(/<\?xml[\s\S]*?\?>/g, "")
+            .replace(/<!--[\s\S]*?-->/g, "")
+            .replace(/>\s+</g, "><")
+            .replace(/\s{2,}/g, " ")
+            .trim();
+          return { blob: new Blob([src], { type: "image/svg+xml" }), filename: `${stripExt(file.name)}.min.svg` };
+        },
+      },
+    ],
+  },
+
+  // ============================================================
+  // URL / SLUG / HASH IDENTIFY
+  // ============================================================
+  {
+    id: "url-parse",
+    category: "Encoders",
+    title: "URL parser",
+    description: "Break every URL in a text file into protocol, host, path, query and hash.",
+    accept: ".txt,text/plain",
+    inputExts: ["TXT"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "JSON",
+        label: "Parsed URLs (JSON)",
+        description: "Array of parsed URL parts, one per input line.",
+        run: async (file) => {
+          const lines = (await file.text()).split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+          const parsed = lines.map((raw) => {
+            try {
+              const u = new URL(raw);
+              return {
+                url: raw,
+                protocol: u.protocol,
+                host: u.host,
+                hostname: u.hostname,
+                port: u.port,
+                pathname: u.pathname,
+                query: Object.fromEntries(u.searchParams),
+                hash: u.hash,
+              };
+            } catch {
+              return { url: raw, error: "invalid" };
+            }
+          });
+          return { blob: new Blob([JSON.stringify(parsed, null, 2)], { type: "application/json" }), filename: `${stripExt(file.name)}-parsed.json` };
+        },
+      },
+    ],
+  },
+  {
+    id: "slugify",
+    category: "Documents",
+    title: "Slugify text",
+    description: "Convert each line of a text file into a URL-safe slug.",
+    accept: ".txt,text/plain",
+    inputExts: ["TXT", "MD", "CSV"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "TXT",
+        label: "Slugified lines",
+        description: "Lowercase, ASCII-folded, dash-separated.",
+        run: async (file) => {
+          const out = (await file.text())
+            .split(/\r?\n/)
+            .map((l) =>
+              l
+                .normalize("NFKD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, "-")
+                .replace(/^-+|-+$/g, ""),
+            )
+            .filter(Boolean)
+            .join("\n");
+          return { blob: new Blob([out + "\n"], { type: "text/plain" }), filename: `${stripExt(file.name)}-slugs.txt` };
+        },
+      },
+    ],
+  },
+  {
+    id: "hash-identify",
+    category: "Encoders",
+    title: "Hash identifier",
+    description: "Guess the algorithm of every hash in a text file (one per line).",
+    accept: ".txt,text/plain",
+    inputExts: ["TXT"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "JSON",
+        label: "Detected hash types",
+        description: "For each line: likely algorithm(s) based on length and charset.",
+        run: async (file) => {
+          const guess = (h: string): string[] => {
+            const t = h.trim();
+            if (!t) return [];
+            if (/^\$2[aby]?\$/.test(t)) return ["bcrypt"];
+            if (/^\$argon2/.test(t)) return ["argon2"];
+            if (/^\$6\$/.test(t)) return ["sha512crypt"];
+            if (/^\$5\$/.test(t)) return ["sha256crypt"];
+            if (/^\$1\$/.test(t)) return ["md5crypt"];
+            if (!/^[a-f0-9]+$/i.test(t)) return ["unknown"];
+            const guesses: Record<number, string[]> = {
+              32: ["MD5", "NTLM", "MD4"],
+              40: ["SHA-1", "RIPEMD-160"],
+              56: ["SHA-224"],
+              64: ["SHA-256", "SHA3-256", "BLAKE2s"],
+              96: ["SHA-384"],
+              128: ["SHA-512", "SHA3-512", "BLAKE2b"],
+              8: ["CRC32"],
+            };
+            return guesses[t.length] ?? ["unknown"];
+          };
+          const lines = (await file.text()).split(/\r?\n/).filter((l) => l.trim());
+          const out = lines.map((h) => ({ hash: h.trim(), candidates: guess(h) }));
+          return { blob: new Blob([JSON.stringify(out, null, 2)], { type: "application/json" }), filename: `${stripExt(file.name)}-identified.json` };
+        },
+      },
+    ],
+  },
 ];
 
 export type FamilyGroup = { title: string; items: Family[] };
