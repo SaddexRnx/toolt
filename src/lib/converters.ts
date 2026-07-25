@@ -2620,6 +2620,457 @@ export const families: Family[] = [
       },
     ],
   },
+
+  // ============================================================
+  // MORE IMAGES
+  // ============================================================
+  {
+    id: "heic-convert",
+    category: "Images",
+    title: "HEIC → JPG/PNG",
+    description: "Convert iPhone HEIC/HEIF photos into browser-friendly JPG or PNG.",
+    accept: ".heic,.heif,image/heic,image/heif",
+    inputExts: ["HEIC", "HEIF"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "JPG",
+        label: "JPG",
+        description: "High-quality JPEG (0.92).",
+        run: async (file) => {
+          const { default: heic2any } = await import("heic2any");
+          const out = (await heic2any({ blob: file, toType: "image/jpeg", quality: 0.92 })) as Blob;
+          return { blob: out, filename: `${stripExt(file.name)}.jpg` };
+        },
+      },
+      {
+        ext: "PNG",
+        label: "PNG",
+        description: "Lossless PNG.",
+        run: async (file) => {
+          const { default: heic2any } = await import("heic2any");
+          const out = (await heic2any({ blob: file, toType: "image/png" })) as Blob;
+          return { blob: out, filename: `${stripExt(file.name)}.png` };
+        },
+      },
+    ],
+  },
+  {
+    id: "exif-viewer",
+    category: "Images",
+    title: "EXIF viewer",
+    description: "Dump all EXIF/XMP/IPTC metadata from a photo as JSON.",
+    accept: "image/*",
+    inputExts: ["JPG", "JPEG", "PNG", "WEBP", "HEIC", "TIFF", "TIF"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "JSON",
+        label: "Metadata JSON",
+        description: "All readable EXIF/XMP/IPTC/GPS tags.",
+        run: async (file) => {
+          const ExifReader = (await import("exifreader")).default;
+          const tags = await ExifReader.load(await file.arrayBuffer(), { expanded: true });
+          const clean = JSON.parse(
+            JSON.stringify(tags, (_k, v) => (v instanceof Uint8Array ? `[${v.length} bytes]` : v)),
+          );
+          return {
+            blob: new Blob([JSON.stringify(clean, null, 2)], { type: "application/json" }),
+            filename: `${stripExt(file.name)}-exif.json`,
+          };
+        },
+      },
+    ],
+  },
+  {
+    id: "color-palette",
+    category: "Images",
+    title: "Color palette",
+    description: "Extract the dominant palette from an image.",
+    accept: "image/*",
+    inputExts: ["JPG", "JPEG", "PNG", "WEBP", "BMP", "GIF"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "JSON",
+        label: "Palette JSON",
+        description: "Dominant colour + top 8 palette entries as hex.",
+        run: async (file) => {
+          const ColorThief = (await import("colorthief")) as unknown as {
+            new (): { getColor(img: HTMLImageElement): [number, number, number]; getPalette(img: HTMLImageElement, n: number): [number, number, number][] };
+          };
+          const img = new Image();
+          const url = URL.createObjectURL(file);
+          await new Promise<void>((res, rej) => {
+            img.onload = () => res();
+            img.onerror = () => rej(new Error("Image load failed"));
+            img.crossOrigin = "anonymous";
+            img.src = url;
+          });
+          const ct = new ColorThief();
+          const toHex = (rgb: [number, number, number]) =>
+            "#" + rgb.map((n) => n.toString(16).padStart(2, "0")).join("");
+          const data = { dominant: toHex(ct.getColor(img)), palette: ct.getPalette(img, 8).map(toHex) };
+          URL.revokeObjectURL(url);
+          return {
+            blob: new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }),
+            filename: `${stripExt(file.name)}-palette.json`,
+          };
+        },
+      },
+      {
+        ext: "PNG",
+        label: "Palette PNG",
+        description: "Visual swatch strip of the top 8 colours.",
+        run: async (file) => {
+          const ColorThief = (await import("colorthief")) as unknown as {
+            new (): { getPalette(img: HTMLImageElement, n: number): [number, number, number][] };
+          };
+          const img = new Image();
+          const url = URL.createObjectURL(file);
+          await new Promise<void>((res, rej) => {
+            img.onload = () => res();
+            img.onerror = () => rej(new Error("Image load failed"));
+            img.crossOrigin = "anonymous";
+            img.src = url;
+          });
+          const palette = new ColorThief().getPalette(img, 8);
+          URL.revokeObjectURL(url);
+          const w = 800, h = 200, sw = w / palette.length;
+          const canvas = document.createElement("canvas");
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext("2d")!;
+          palette.forEach(([r, g, b], i) => {
+            ctx.fillStyle = `rgb(${r},${g},${b})`;
+            ctx.fillRect(i * sw, 0, sw, h);
+          });
+          return { blob: await canvasToBlob(canvas, "image/png"), filename: `${stripExt(file.name)}-palette.png` };
+        },
+      },
+    ],
+  },
+  {
+    id: "contact-sheet",
+    category: "Images",
+    title: "Contact sheet",
+    description: "Arrange multiple images into a single grid poster (4 per row).",
+    accept: "image/*",
+    inputExts: ["JPG", "JPEG", "PNG", "WEBP", "BMP", "GIF"],
+    mode: "combine",
+    outputExt: "PNG",
+    outputLabel: "Contact sheet PNG",
+    outputDescription: "All images arranged in a 4-column grid with labels.",
+    run: async (files) => {
+      const cell = 300, pad = 12, cols = 4, labelH = 24;
+      const rows = Math.ceil(files.length / cols);
+      const canvas = document.createElement("canvas");
+      canvas.width = cols * (cell + pad) + pad;
+      canvas.height = rows * (cell + pad + labelH) + pad;
+      const ctx = canvas.getContext("2d")!;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.font = "12px monospace";
+      ctx.fillStyle = "#000";
+      for (let i = 0; i < files.length; i++) {
+        const bitmap = await createImageBitmap(files[i]);
+        const scale = Math.min(cell / bitmap.width, cell / bitmap.height);
+        const dw = bitmap.width * scale, dh = bitmap.height * scale;
+        const col = i % cols, row = Math.floor(i / cols);
+        const x = pad + col * (cell + pad);
+        const y = pad + row * (cell + pad + labelH);
+        ctx.drawImage(bitmap, x + (cell - dw) / 2, y + (cell - dh) / 2, dw, dh);
+        const name = files[i].name.length > 40 ? files[i].name.slice(0, 37) + "…" : files[i].name;
+        ctx.fillText(name, x, y + cell + 14);
+      }
+      return { blob: await canvasToBlob(canvas, "image/png"), filename: "contact-sheet.png" };
+    },
+  },
+
+  // ============================================================
+  // MORE PDF
+  // ============================================================
+  {
+    id: "pdf-remove-blank",
+    category: "PDF",
+    title: "Remove blank pages",
+    description: "Strip pages that contain no extractable text.",
+    accept: ".pdf,application/pdf",
+    inputExts: ["PDF"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "PDF",
+        label: "PDF without blanks",
+        description: "Pages with no text content are removed.",
+        run: async (file) => {
+          const pdfjs = await import("pdfjs-dist");
+          const workerUrl = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
+          (pdfjs as unknown as { GlobalWorkerOptions: { workerSrc: string } }).GlobalWorkerOptions.workerSrc = workerUrl;
+          const { PDFDocument } = await import("pdf-lib");
+          const buf = await file.arrayBuffer();
+          const doc = await pdfjs.getDocument({ data: new Uint8Array(buf) }).promise;
+          const keep: number[] = [];
+          for (let i = 1; i <= doc.numPages; i++) {
+            const page = await doc.getPage(i);
+            const txt = await page.getTextContent();
+            const text = txt.items.map((it) => ("str" in it ? it.str : "")).join("").trim();
+            if (text.length > 0) keep.push(i - 1);
+          }
+          const src = await PDFDocument.load(buf);
+          const out = await PDFDocument.create();
+          const copied = await out.copyPages(src, keep);
+          copied.forEach((p) => out.addPage(p));
+          return {
+            blob: new Blob([(await out.save()) as unknown as ArrayBuffer], { type: "application/pdf" }),
+            filename: `${stripExt(file.name)}-noblank.pdf`,
+          };
+        },
+      },
+    ],
+  },
+
+  // ============================================================
+  // MORE DATA
+  // ============================================================
+  {
+    id: "csv-dedupe",
+    category: "Data",
+    title: "CSV deduplicate",
+    description: "Remove duplicate rows from a CSV (header preserved).",
+    accept: ".csv,text/csv",
+    inputExts: ["CSV"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "CSV",
+        label: "Deduped CSV",
+        description: "Duplicate rows removed, first occurrence kept.",
+        run: async (file) => {
+          const Papa = (await import("papaparse")).default;
+          const text = await file.text();
+          const parsed = Papa.parse<string[]>(text, { skipEmptyLines: true });
+          const seen = new Set<string>();
+          const rows = parsed.data.filter((r, i) => {
+            if (i === 0) return true;
+            const key = JSON.stringify(r);
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+          return {
+            blob: new Blob([Papa.unparse(rows)], { type: "text/csv" }),
+            filename: `${stripExt(file.name)}-deduped.csv`,
+          };
+        },
+      },
+    ],
+  },
+  {
+    id: "csv-merge",
+    category: "Data",
+    title: "Merge CSV files",
+    description: "Concatenate multiple CSVs. The first file's header is kept.",
+    accept: ".csv,text/csv",
+    inputExts: ["CSV"],
+    mode: "combine",
+    outputExt: "CSV",
+    outputLabel: "Merged CSV",
+    outputDescription: "Rows from every file appended into one, first header only.",
+    run: async (files) => {
+      const Papa = (await import("papaparse")).default;
+      let header: string[] | null = null;
+      const out: string[][] = [];
+      for (const f of files) {
+        const parsed = Papa.parse<string[]>(await f.text(), { skipEmptyLines: true });
+        if (!parsed.data.length) continue;
+        if (!header) { header = parsed.data[0]; out.push(header); }
+        for (let i = 1; i < parsed.data.length; i++) out.push(parsed.data[i]);
+      }
+      return { blob: new Blob([Papa.unparse(out)], { type: "text/csv" }), filename: "merged.csv" };
+    },
+  },
+  {
+    id: "sql-format",
+    category: "Data",
+    title: "SQL formatter",
+    description: "Pretty-print SQL queries (standard dialect, 2-space indent).",
+    accept: ".sql,text/plain",
+    inputExts: ["SQL", "TXT"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "SQL",
+        label: "Formatted SQL",
+        description: "Standard SQL, uppercase keywords, 2-space indent.",
+        run: async (file) => {
+          const { format } = await import("sql-formatter");
+          const out = format(await file.text(), { language: "sql", keywordCase: "upper", tabWidth: 2 });
+          return { blob: new Blob([out], { type: "text/plain" }), filename: `${stripExt(file.name)}-formatted.sql` };
+        },
+      },
+    ],
+  },
+
+  // ============================================================
+  // MORE ENCODERS / UTILITIES
+  // ============================================================
+  {
+    id: "file-checksums",
+    category: "Encoders",
+    title: "File checksums",
+    description: "Compute MD5, SHA-1, SHA-256 and SHA-512 hashes of any file.",
+    accept: "*/*",
+    inputExts: ["ANY"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "TXT",
+        label: "Checksum report",
+        description: "MD5 + SHA-1/256/512 written as a text report.",
+        run: async (file) => {
+          const buf = await file.arrayBuffer();
+          const bytes = new Uint8Array(buf);
+          const hex = (b: ArrayBuffer) => Array.from(new Uint8Array(b)).map((n) => n.toString(16).padStart(2, "0")).join("");
+          const { default: SparkMD5 } = await import("spark-md5");
+          const md5 = SparkMD5.ArrayBuffer.hash(buf);
+          const [sha1, sha256, sha512] = await Promise.all([
+            crypto.subtle.digest("SHA-1", bytes).then(hex),
+            crypto.subtle.digest("SHA-256", bytes).then(hex),
+            crypto.subtle.digest("SHA-512", bytes).then(hex),
+          ]);
+          const report = `File:   ${file.name}\nSize:   ${file.size} bytes\n\nMD5:    ${md5}\nSHA1:   ${sha1}\nSHA256: ${sha256}\nSHA512: ${sha512}\n`;
+          return { blob: new Blob([report], { type: "text/plain" }), filename: `${stripExt(file.name)}-checksums.txt` };
+        },
+      },
+    ],
+  },
+  {
+    id: "file-inspector",
+    category: "Encoders",
+    title: "File inspector",
+    description: "Detect MIME type from magic bytes and dump basic metadata.",
+    accept: "*/*",
+    inputExts: ["ANY"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "JSON",
+        label: "Inspection JSON",
+        description: "Name, size, browser MIME, detected MIME, magic-byte signature.",
+        run: async (file) => {
+          const head = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+          const hex = Array.from(head).map((n) => n.toString(16).padStart(2, "0")).join(" ");
+          const sig = (bytes: number[]) => bytes.every((b, i) => head[i] === b);
+          let detected = "application/octet-stream";
+          if (sig([0x89, 0x50, 0x4e, 0x47])) detected = "image/png";
+          else if (sig([0xff, 0xd8, 0xff])) detected = "image/jpeg";
+          else if (sig([0x47, 0x49, 0x46, 0x38])) detected = "image/gif";
+          else if (sig([0x25, 0x50, 0x44, 0x46])) detected = "application/pdf";
+          else if (sig([0x50, 0x4b, 0x03, 0x04])) detected = "application/zip (or docx/xlsx/pptx)";
+          else if (sig([0x52, 0x49, 0x46, 0x46])) detected = "audio/wav or video/avi (RIFF)";
+          else if (sig([0x1f, 0x8b])) detected = "application/gzip";
+          else if (sig([0x42, 0x4d])) detected = "image/bmp";
+          else if (sig([0x00, 0x00, 0x00]) && head[4] === 0x66 && head[5] === 0x74 && head[6] === 0x79 && head[7] === 0x70) detected = "video/mp4 (ftyp)";
+          const data = {
+            name: file.name,
+            size: file.size,
+            browserMime: file.type || "(none)",
+            detectedMime: detected,
+            magicHex: hex,
+            lastModified: new Date(file.lastModified).toISOString(),
+          };
+          return {
+            blob: new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }),
+            filename: `${stripExt(file.name)}-info.json`,
+          };
+        },
+      },
+    ],
+  },
+  {
+    id: "barcode-generate",
+    category: "Encoders",
+    title: "Barcode generator",
+    description: "Turn each line of a text file into a CODE128 barcode PNG.",
+    accept: ".txt,text/plain",
+    inputExts: ["TXT"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "PNG",
+        label: "Barcode PNG",
+        description: "First line of the file rendered as a CODE128 barcode.",
+        run: async (file) => {
+          const JsBarcode = (await import("jsbarcode")).default;
+          const line = (await file.text()).split(/\r?\n/).find((l) => l.trim()) ?? "";
+          if (!line) throw new Error("File is empty");
+          const canvas = document.createElement("canvas");
+          JsBarcode(canvas, line, { format: "CODE128", displayValue: true });
+          return { blob: await canvasToBlob(canvas, "image/png"), filename: `${stripExt(file.name)}-barcode.png` };
+        },
+      },
+    ],
+  },
+
+  // ============================================================
+  // MORE DOCUMENTS / TEXT
+  // ============================================================
+  {
+    id: "text-stats",
+    category: "Documents",
+    title: "Word & character counter",
+    description: "Count characters, words, lines and reading time for any text file.",
+    accept: ".txt,.md,.html,.csv,text/*",
+    inputExts: ["TXT", "MD", "HTML", "CSV", "LOG", "JSON", "XML", "YAML", "YML"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "JSON",
+        label: "Stats JSON",
+        description: "Character/word/line counts plus average reading time.",
+        run: async (file) => {
+          const text = await file.text();
+          const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+          const stats = {
+            characters: text.length,
+            charactersNoSpaces: text.replace(/\s/g, "").length,
+            words,
+            lines: text.split(/\r?\n/).length,
+            sentences: (text.match(/[.!?]+\s/g) || []).length,
+            readingTimeMinutes: +(words / 200).toFixed(2),
+          };
+          return {
+            blob: new Blob([JSON.stringify(stats, null, 2)], { type: "application/json" }),
+            filename: `${stripExt(file.name)}-stats.json`,
+          };
+        },
+      },
+    ],
+  },
+  {
+    id: "text-random-lines",
+    category: "Documents",
+    title: "Random line picker",
+    description: "Return 10 random non-empty lines from a text file.",
+    accept: ".txt,text/plain",
+    inputExts: ["TXT", "MD", "LOG", "CSV"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "TXT",
+        label: "10 random lines",
+        description: "Ten unique random lines (or fewer if file is shorter).",
+        run: async (file) => {
+          const lines = (await file.text()).split(/\r?\n/).filter((l) => l.trim());
+          const pick = Math.min(10, lines.length);
+          const chosen = new Set<number>();
+          while (chosen.size < pick) chosen.add(Math.floor(Math.random() * lines.length));
+          const out = Array.from(chosen).map((i) => lines[i]).join("\n");
+          return { blob: new Blob([out], { type: "text/plain" }), filename: `${stripExt(file.name)}-random.txt` };
+        },
+      },
+    ],
+  },
 ];
 
 export type FamilyGroup = { title: string; items: Family[] };
