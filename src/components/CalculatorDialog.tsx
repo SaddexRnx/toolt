@@ -126,3 +126,30 @@ function FieldRow({ field, value, onChange }: { field: CalcField; value: string;
     </label>
   );
 }
+
+function CopyButton({ text, label, compact }: { text: string; label?: string; compact?: boolean }) {
+  const [copied, setCopied] = useState(false);
+  const onCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch {
+      /* clipboard unavailable */
+    }
+  };
+  return (
+    <button
+      type="button"
+      onClick={onCopy}
+      aria-label={`Copy ${label ?? "value"}`}
+      title={copied ? "Copied!" : "Copy"}
+      className={
+        "inline-flex shrink-0 items-center justify-center rounded border border-foreground/15 bg-background text-muted-foreground transition hover:border-foreground/40 hover:text-foreground " +
+        (compact ? "h-6 w-6" : "h-7 w-7")
+      }
+    >
+      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+    </button>
+  );
+}
