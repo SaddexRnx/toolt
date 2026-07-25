@@ -1,10 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { ArrowUpRight, ShieldCheck, Zap, Layers, Search } from "lucide-react";
+import { ArrowUpRight, ShieldCheck, Zap, Layers, Search, Calculator as CalcIcon } from "lucide-react";
 import { groups, families, type Family } from "@/lib/converters";
+import { calculators, type Calculator } from "@/lib/calculators";
 import { ConverterDialog } from "@/components/ConverterDialog";
+import { CalculatorDialog } from "@/components/CalculatorDialog";
 import { SmartDropZone } from "@/components/SmartDropZone";
 import tooltLogo from "@/assets/toolt-logo.png.asset.json";
+
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -66,36 +69,55 @@ export const Route = createFileRoute("/")({
 
 function Home() {
   const [active, setActive] = useState<Family | null>(null);
+  const [activeCalc, setActiveCalc] = useState<Calculator | null>(null);
   const [initialFiles, setInitialFiles] = useState<File[] | null>(null);
   const [category, setCategory] = useState<string>("All");
   const [query, setQuery] = useState("");
 
-  const total = families.length;
-  const totalOutputs = families.reduce(
-    (n, f) => n + (f.mode === "per-file" ? f.outputs.length : 1),
-    0,
-  );
+  const total = families.length + calculators.length;
+  const totalOutputs =
+    families.reduce((n, f) => n + (f.mode === "per-file" ? f.outputs.length : 1), 0) +
+    calculators.length;
 
-  const categories = useMemo(() => ["All", ...groups.map((g) => g.title)], []);
+  // Merge converter families and calculators into a unified item list per category.
+  type CatalogItem =
+    | { kind: "family"; family: Family }
+    | { kind: "calc"; calc: Calculator };
+
+  const mergedGroups = useMemo(() => {
+    const map = new Map<string, CatalogItem[]>();
+    for (const g of groups) map.set(g.title, g.items.map((f) => ({ kind: "family" as const, family: f })));
+    for (const c of calculators) {
+      const arr = map.get(c.category) ?? [];
+      arr.push({ kind: "calc", calc: c });
+      map.set(c.category, arr);
+    }
+    return Array.from(map, ([title, items]) => ({ title, items }));
+  }, []);
+
+  const categories = useMemo(() => ["All", ...mergedGroups.map((g) => g.title)], [mergedGroups]);
 
   const filteredGroups = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return groups
+    return mergedGroups
       .filter((g) => category === "All" || g.title === category)
       .map((g) => ({
         ...g,
-        items: g.items.filter((f) => {
+        items: g.items.filter((item) => {
           if (!q) return true;
-          if (f.title.toLowerCase().includes(q)) return true;
-          if (f.description.toLowerCase().includes(q)) return true;
-          if (f.inputExts.some((e) => e.toLowerCase().includes(q))) return true;
-          const outs = f.mode === "per-file" ? f.outputs.map((o) => o.ext) : [f.outputExt];
-          if (outs.some((e) => e.toLowerCase().includes(q))) return true;
-          return false;
+          if (item.kind === "family") {
+            const f = item.family;
+            if (f.title.toLowerCase().includes(q)) return true;
+            if (f.description.toLowerCase().includes(q)) return true;
+            if (f.inputExts.some((e) => e.toLowerCase().includes(q))) return true;
+            const outs = f.mode === "per-file" ? f.outputs.map((o) => o.ext) : [f.outputExt];
+            return outs.some((e) => e.toLowerCase().includes(q));
+          }
+          return item.calc.title.toLowerCase().includes(q) || item.calc.description.toLowerCase().includes(q);
         }),
       }))
       .filter((g) => g.items.length > 0);
-  }, [category, query]);
+  }, [mergedGroups, category, query]);
 
   const totalFiltered = filteredGroups.reduce((n, g) => n + g.items.length, 0);
 
@@ -103,11 +125,14 @@ function Home() {
     setInitialFiles(files && files.length > 0 ? files : null);
     setActive(family);
   };
+  const openCalc = (c: Calculator) => setActiveCalc(c);
 
   const close = () => {
     setActive(null);
     setInitialFiles(null);
   };
+  const closeCalc = () => setActiveCalc(null);
+
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -209,7 +234,7 @@ function Home() {
                 const count =
                   cat === "All"
                     ? total
-                    : groups.find((g) => g.title === cat)?.items.length ?? 0;
+                    : mergedGroups.find((g) => g.title === cat)?.items.length ?? 0;
                 return (
                   <button
                     key={cat}
@@ -258,7 +283,32 @@ function Home() {
               </div>
 
               <div className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-foreground/10 bg-foreground/10 sm:grid-cols-2 lg:grid-cols-3">
-                {group.items.map((f) => {
+                {group.items.map((item) => {
+                  if (item.kind === "calc") {
+                    const c = item.calc;
+                    return (
+                      <button
+                        key={`calc-${c.id}`}
+                        onClick={() => openCalc(c)}
+                        className="group flex flex-col justify-between gap-6 bg-background p-6 text-left transition-colors hover:bg-foreground hover:text-background"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest">
+                            <span className="flex items-center gap-1 rounded border border-current px-1.5 py-0.5">
+                              <CalcIcon className="h-3 w-3" />
+                              Interactive
+                            </span>
+                          </div>
+                          <ArrowUpRight className="h-4 w-4 opacity-40 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:opacity-100" />
+                        </div>
+                        <div>
+                          <div className="text-base font-medium">{c.title}</div>
+                          <p className="mt-1 line-clamp-2 text-sm opacity-60">{c.description}</p>
+                        </div>
+                      </button>
+                    );
+                  }
+                  const f = item.family;
                   const outs = f.mode === "per-file" ? f.outputs.map((o) => o.ext) : [f.outputExt];
                   return (
                     <button
@@ -269,21 +319,12 @@ function Home() {
                       <div className="flex items-center justify-between">
                         <div className="flex flex-wrap items-center gap-1 font-mono text-[10px] uppercase tracking-widest">
                           {f.inputExts.slice(0, 3).map((e) => (
-                            <span key={e} className="rounded border border-current px-1.5 py-0.5">
-                              {e}
-                            </span>
+                            <span key={e} className="rounded border border-current px-1.5 py-0.5">{e}</span>
                           ))}
-                          {f.inputExts.length > 3 && (
-                            <span className="opacity-60">+{f.inputExts.length - 3}</span>
-                          )}
+                          {f.inputExts.length > 3 && <span className="opacity-60">+{f.inputExts.length - 3}</span>}
                           <span className="mx-1 opacity-40">→</span>
                           {outs.slice(0, 3).map((e) => (
-                            <span
-                              key={e}
-                              className="rounded bg-current px-1.5 py-0.5 text-background group-hover:text-foreground"
-                            >
-                              {e}
-                            </span>
+                            <span key={e} className="rounded bg-current px-1.5 py-0.5 text-background group-hover:text-foreground">{e}</span>
                           ))}
                           {outs.length > 3 && <span className="opacity-60">+{outs.length - 3}</span>}
                         </div>
@@ -298,6 +339,7 @@ function Home() {
                 })}
               </div>
             </div>
+
           ))
         )}
       </section>
@@ -313,6 +355,8 @@ function Home() {
       </footer>
 
       <ConverterDialog family={active} onClose={close} initialFiles={initialFiles} />
+      <CalculatorDialog calc={activeCalc} onClose={closeCalc} />
+
     </div>
   );
 }
