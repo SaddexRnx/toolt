@@ -151,7 +151,8 @@ src/
 │   ├── calculators.ts      # Interactive tools
 │   ├── color-tools.ts
 │   ├── css-tools.ts
-│   ├── ffmpeg.ts           # Lazy FFmpeg loader
+│   ├── ffmpeg.ts           # Lazy FFmpeg loader + SHA-384 SRI check
+│   ├── limits.ts           # Cooldown, concurrency, file-size guards
 │   ├── preview.ts          # Thumbnails
 │   ├── history.ts          # IndexedDB
 │   ├── i18n.tsx            # 21 languages
