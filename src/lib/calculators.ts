@@ -471,6 +471,8 @@ export const calculators: Calculator[] = [
   },
   // -------- Color --------
   ...colorCalculators,
+  // -------- CSS builders --------
+  ...cssCalculators,
 ];
 
 export type CalcGroup = { title: string; items: Calculator[] };
