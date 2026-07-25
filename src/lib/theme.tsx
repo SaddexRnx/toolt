@@ -11,19 +11,21 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  // Server always renders "light" (matches :root defaults). Client hydrates
-  // to the saved/preferred theme after mount to avoid hydration mismatch.
+  // The pre-hydration script in __root already applied the correct theme class
+  // before React mounted. Read it back to stay in sync on first render.
   const [theme, setThemeState] = useState<Theme>("light");
 
   useEffect(() => {
     try {
+      const hasDark =
+        typeof document !== "undefined" &&
+        document.documentElement.classList.contains("dark");
       const saved = localStorage.getItem("toolt.theme") as Theme | null;
       if (saved === "light" || saved === "dark") {
         setThemeState(saved);
-        return;
+      } else {
+        setThemeState(hasDark ? "dark" : "light");
       }
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      setThemeState(prefersDark ? "dark" : "light");
     } catch { /* ignore */ }
   }, []);
 
