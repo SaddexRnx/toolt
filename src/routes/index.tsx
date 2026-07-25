@@ -1,10 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { ArrowUpRight, ShieldCheck, Zap, Layers, Search } from "lucide-react";
+import { ArrowUpRight, ShieldCheck, Zap, Layers, Search, Calculator as CalcIcon } from "lucide-react";
 import { groups, families, type Family } from "@/lib/converters";
+import { calculators, type Calculator } from "@/lib/calculators";
 import { ConverterDialog } from "@/components/ConverterDialog";
+import { CalculatorDialog } from "@/components/CalculatorDialog";
 import { SmartDropZone } from "@/components/SmartDropZone";
 import tooltLogo from "@/assets/toolt-logo.png.asset.json";
+
 
 export const Route = createFileRoute("/")({
   component: Home,
