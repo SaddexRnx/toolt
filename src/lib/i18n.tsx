@@ -558,7 +558,69 @@ const hi: Dict = {
   "ui.history": "इतिहास", "ui.processing": "प्रोसेस हो रहा…", "ui.ready": "तैयार", "ui.pending": "लंबित", "ui.error": "त्रुटि",
 };
 
-const DICTS: Record<Lang, Dict> = { en, es, fr, de, it, pt, nl, ru, zh, ja, ko, ar, tr, pl, hi };
+// Additional languages — minimal dicts. Missing keys fall back to English.
+const vi: Dict = {
+  "smart.title": "Thả thông minh", "smart.drop.label": "Thả tệp vào đây — chúng tôi sẽ nhận diện",
+  "smart.drop.hint": "hoặc bấm để chọn. Sau đó chọn công cụ phù hợp.",
+  "smart.clear": "Xoá", "smart.change": "Đổi tệp",
+  "smart.hide": "Ẩn thả thông minh", "smart.show": "Hiện thả thông minh",
+  "catalog.title": "Tất cả công cụ", "catalog.category.all": "Tất cả", "catalog.interactive": "Tương tác",
+  "ui.language": "Ngôn ngữ", "ui.theme": "Giao diện", "ui.theme.light": "Sáng", "ui.theme.dark": "Tối",
+  "ui.close": "Đóng", "ui.download": "Tải xuống", "ui.cancel": "Huỷ", "ui.retry": "Thử lại", "ui.remove": "Xoá",
+  "footer.motto": "không tải lên · không theo dõi · không giới hạn",
+};
+const id: Dict = {
+  "smart.title": "Drop pintar", "smart.drop.label": "Lepas file di sini — kami akan mendeteksinya",
+  "smart.drop.hint": "atau klik untuk memilih. Lalu pilih alat yang cocok.",
+  "smart.clear": "Bersihkan", "smart.change": "Ganti file",
+  "smart.hide": "Sembunyikan drop pintar", "smart.show": "Tampilkan drop pintar",
+  "catalog.title": "Semua alat", "catalog.category.all": "Semua", "catalog.interactive": "Interaktif",
+  "ui.language": "Bahasa", "ui.theme": "Tema", "ui.theme.light": "Terang", "ui.theme.dark": "Gelap",
+  "ui.close": "Tutup", "ui.download": "Unduh", "ui.cancel": "Batal", "ui.retry": "Coba lagi", "ui.remove": "Hapus",
+  "footer.motto": "tanpa unggah · tanpa pelacakan · tanpa batas",
+};
+const uk: Dict = {
+  "smart.title": "Розумне перетягування", "smart.drop.label": "Перетягніть файл — ми його розпізнаємо",
+  "smart.drop.hint": "або натисніть, щоб вибрати. Далі оберіть інструмент.",
+  "smart.clear": "Очистити", "smart.change": "Змінити файли",
+  "smart.hide": "Сховати розумне перетягування", "smart.show": "Показати розумне перетягування",
+  "catalog.title": "Усі інструменти", "catalog.category.all": "Усі", "catalog.interactive": "Інтерактивний",
+  "ui.language": "Мова", "ui.theme": "Тема", "ui.theme.light": "Світла", "ui.theme.dark": "Темна",
+  "ui.close": "Закрити", "ui.download": "Завантажити", "ui.cancel": "Скасувати", "ui.retry": "Повторити", "ui.remove": "Видалити",
+  "footer.motto": "без завантажень · без стеження · без обмежень",
+};
+const sv: Dict = {
+  "smart.title": "Smart släpp", "smart.drop.label": "Släpp en fil här — vi känner igen den",
+  "smart.drop.hint": "eller klicka för att bläddra. Välj sedan matchande verktyg.",
+  "smart.clear": "Rensa", "smart.change": "Byt filer",
+  "smart.hide": "Dölj smart släpp", "smart.show": "Visa smart släpp",
+  "catalog.title": "Alla verktyg", "catalog.category.all": "Alla", "catalog.interactive": "Interaktiv",
+  "ui.language": "Språk", "ui.theme": "Tema", "ui.theme.light": "Ljust", "ui.theme.dark": "Mörkt",
+  "ui.close": "Stäng", "ui.download": "Ladda ner", "ui.cancel": "Avbryt", "ui.retry": "Försök igen", "ui.remove": "Ta bort",
+  "footer.motto": "inga uppladdningar · ingen spårning · inga gränser",
+};
+const cs: Dict = {
+  "smart.title": "Chytré přetažení", "smart.drop.label": "Přetáhněte soubor sem — my ho rozpoznáme",
+  "smart.drop.hint": "nebo klikněte pro procházení. Poté vyberte nástroj.",
+  "smart.clear": "Vyčistit", "smart.change": "Změnit soubory",
+  "smart.hide": "Skrýt chytré přetažení", "smart.show": "Zobrazit chytré přetažení",
+  "catalog.title": "Všechny nástroje", "catalog.category.all": "Vše", "catalog.interactive": "Interaktivní",
+  "ui.language": "Jazyk", "ui.theme": "Motiv", "ui.theme.light": "Světlý", "ui.theme.dark": "Tmavý",
+  "ui.close": "Zavřít", "ui.download": "Stáhnout", "ui.cancel": "Zrušit", "ui.retry": "Opakovat", "ui.remove": "Odstranit",
+  "footer.motto": "žádné nahrávání · žádné sledování · žádné limity",
+};
+const he: Dict = {
+  "smart.title": "שחרור חכם", "smart.drop.label": "גררו קובץ לכאן — נזהה אותו",
+  "smart.drop.hint": "או לחצו לבחירה. אחר כך בחרו כלי מתאים.",
+  "smart.clear": "נקה", "smart.change": "החלף קבצים",
+  "smart.hide": "הסתר שחרור חכם", "smart.show": "הצג שחרור חכם",
+  "catalog.title": "כל הכלים", "catalog.category.all": "הכל", "catalog.interactive": "אינטראקטיבי",
+  "ui.language": "שפה", "ui.theme": "ערכת נושא", "ui.theme.light": "בהיר", "ui.theme.dark": "כהה",
+  "ui.close": "סגור", "ui.download": "הורדה", "ui.cancel": "ביטול", "ui.retry": "נסה שוב", "ui.remove": "הסר",
+  "footer.motto": "ללא העלאות · ללא מעקב · ללא הגבלה",
+};
+
+const DICTS: Record<Lang, Dict> = { en, es, fr, de, it, pt, nl, ru, zh, ja, ko, ar, tr, pl, hi, vi, id, uk, sv, cs, he };
 
 type I18nContextValue = {
   lang: Lang;
