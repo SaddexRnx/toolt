@@ -56,9 +56,12 @@ export function CalculatorDialog({ calc, onClose }: Props) {
               <div key={i} className="space-y-2 border-b border-foreground/5 pb-2 last:border-0">
                 {r.preview ? (
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <span className="text-sm text-muted-foreground">{r.label}</span>
-                      {r.value && <span className="text-xs font-mono text-muted-foreground">{r.value}</span>}
+                      <span className="flex items-center gap-2 min-w-0">
+                        {r.value && <span className="truncate text-xs font-mono text-muted-foreground" title={r.value}>{r.value}</span>}
+                        <CopyButton text={styleToCss(r.value, r.preview.style)} label={`${r.label} CSS`} />
+                      </span>
                     </div>
                     <div
                       className="flex min-h-[140px] w-full items-center justify-center overflow-hidden rounded-md border border-foreground/10 p-4"
@@ -200,4 +203,16 @@ function CopyButton({ text, label, compact }: { text: string; label?: string; co
       {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
     </button>
   );
+}
+
+function styleToCss(value: string | undefined, style: Record<string, unknown> | undefined): string {
+  // If value already contains a full CSS declaration list, prefer it.
+  if (value && /[:;]/.test(value) && value.includes(":")) return value;
+  if (!style) return value ?? "";
+  const kebab = (s: string) => s.replace(/[A-Z]/g, (m) => "-" + m.toLowerCase());
+  const lines = Object.entries(style)
+    .filter(([, v]) => v !== undefined && v !== null && v !== "")
+    .map(([k, v]) => `${kebab(k)}: ${String(v)};`);
+  const prefix = value && value.trim() ? `/* ${value} */\n` : "";
+  return prefix + lines.join("\n");
 }
