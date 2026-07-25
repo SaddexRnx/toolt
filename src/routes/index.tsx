@@ -1,11 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowUpRight, ShieldCheck, Zap, Layers, Search, Calculator as CalcIcon } from "lucide-react";
 import { groups, families, type Family } from "@/lib/converters";
 import { calculators, type Calculator } from "@/lib/calculators";
 import { ConverterDialog } from "@/components/ConverterDialog";
 import { CalculatorDialog } from "@/components/CalculatorDialog";
 import { SmartDropZone } from "@/components/SmartDropZone";
+import { TopBarControls } from "@/components/TopBarControls";
+import { useT } from "@/lib/i18n";
 import tooltLogo from "@/assets/toolt-logo.png.asset.json";
 
 
@@ -68,11 +70,15 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
+  const t = useT();
   const [active, setActive] = useState<Family | null>(null);
   const [activeCalc, setActiveCalc] = useState<Calculator | null>(null);
   const [initialFiles, setInitialFiles] = useState<File[] | null>(null);
   const [category, setCategory] = useState<string>("All");
   const [query, setQuery] = useState("");
+  // Compute year on client only to avoid SSR/client mismatch across year rollovers.
+  const [year, setYear] = useState<number | null>(null);
+  useEffect(() => setYear(new Date().getFullYear()), []);
 
   const total = families.length + calculators.length;
   const totalOutputs =
@@ -144,10 +150,13 @@ function Home() {
             <span className="text-sm font-semibold tracking-tight">To_olT</span>
             <span className="brand-dot-sm ml-1" aria-hidden />
           </div>
-          <span className="hidden items-center gap-2 text-xs font-mono uppercase tracking-widest text-muted-foreground md:flex">
-            <span className="brand-dot-sm" aria-hidden />
-            {total} tools · {totalOutputs} formats · 100% in-browser
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="hidden items-center gap-2 text-xs font-mono uppercase tracking-widest text-muted-foreground md:flex">
+              <span className="brand-dot-sm" aria-hidden />
+              {total} · {totalOutputs} · {t("brand.tagline")}
+            </span>
+            <TopBarControls />
+          </div>
         </div>
       </header>
 
@@ -157,64 +166,39 @@ function Home() {
       <section className="mx-auto max-w-6xl px-6 py-20 md:py-24">
         <div className="brand-rise mb-5 inline-flex items-center gap-2 rounded-full border border-foreground/15 px-3 py-1 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
           <span className="brand-dot-sm" aria-hidden />
-          Live · runs entirely in your browser
+          {t("hero.badge")}
         </div>
         <h1 className="brand-rise text-5xl font-semibold leading-[0.95] tracking-tight md:text-7xl">
           To_olT<span style={{ color: "var(--brand)" }}>.</span>
           <br />
-          <span className="text-muted-foreground">Every file tool. One page. Zero uploads.</span>
+          <span className="text-muted-foreground">{t("hero.title.suffix")}</span>
         </h1>
 
         <p className="mt-6 max-w-2xl text-base text-muted-foreground md:text-lg">
-          {total} tools · {totalOutputs} output formats. To_olT converts, compresses, merges, splits,
-          extracts, formats, hashes, scans and generates — PDFs, images, video, audio, documents,
-          data, code and config. Everything runs locally in your browser: no accounts, no uploads,
-          no limits.
+          {t("hero.desc", { tools: total, outputs: totalOutputs })}
         </p>
 
         <div className="mt-8 flex flex-wrap gap-1.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
           {[
-            "PDF",
-            "Images",
-            "Video",
-            "Audio",
-            "Documents",
-            "Spreadsheets",
-            "Data",
-            "Archives",
-            "Encoders",
-            "Hashes",
-            "JSON",
-            "YAML / TOML",
-            "HTML / CSS",
-            "SQL",
-            "Regex",
-            "JWT",
-            "UUID",
-            "Cron",
-            "Kubernetes",
-            "Git",
-            "Barcodes / QR",
-            "OCR",
-            "Background removal",
-            "Upscale",
-            "Secrets scanner",
-          ].map((t) => (
-            <span key={t} className="rounded border border-foreground/15 px-1.5 py-0.5">
-              {t}
+            "PDF","Images","Video","Audio","Documents","Spreadsheets","Data","Archives",
+            "Encoders","Hashes","JSON","YAML / TOML","HTML / CSS","SQL","Regex","JWT","UUID",
+            "Cron","Kubernetes","Git","Barcodes / QR","OCR","Background removal","Upscale","Secrets scanner",
+          ].map((tag) => (
+            <span key={tag} className="rounded border border-foreground/15 px-1.5 py-0.5">
+              {tag}
             </span>
           ))}
         </div>
 
         <div className="mt-10 grid grid-cols-1 gap-6 border-t border-foreground/10 pt-8 sm:grid-cols-3">
-          <Feature icon={<ShieldCheck className="h-4 w-4" />} title="Private by design">
-            Files never touch a server. Every byte is processed on your device.
+          <Feature icon={<ShieldCheck className="h-4 w-4" />} title={t("features.private.title")}>
+            {t("features.private.body")}
           </Feature>
-          <Feature icon={<Zap className="h-4 w-4" />} title="Instant & batchable">
-            Drop one file or a hundred. Preview, retry, rename, ZIP or download one-by-one.
+          <Feature icon={<Zap className="h-4 w-4" />} title={t("features.instant.title")}>
+            {t("features.instant.body")}
           </Feature>
-          <Feature icon={<Layers className="h-4 w-4" />} title="Open source stack">
-            pdf-lib, pdf.js, SheetJS, ffmpeg.wasm, tesseract.js and more. No API keys.
+          <Feature icon={<Layers className="h-4 w-4" />} title={t("features.oss.title")}>
+            {t("features.oss.body")}
           </Feature>
         </div>
       </section>
@@ -229,10 +213,10 @@ function Home() {
         <div className="mb-6 flex items-baseline justify-between border-b border-foreground/10 pb-3">
           <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight">
             <span className="brand-dot-sm" aria-hidden />
-            All tools
+            {t("catalog.title")}
           </h2>
           <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-            {totalFiltered} shown
+            {t("catalog.shown", { n: totalFiltered })}
           </span>
         </div>
 
@@ -247,6 +231,7 @@ function Home() {
                   cat === "All"
                     ? total
                     : mergedGroups.find((g) => g.title === cat)?.items.length ?? 0;
+                const label = cat === "All" ? t("catalog.category.all") : cat;
                 return (
                   <button
                     key={cat}
@@ -257,7 +242,7 @@ function Home() {
                         : "border-foreground/15 text-foreground/70 hover:border-foreground/40 hover:text-foreground"
                     }`}
                   >
-                    {cat}
+                    {label}
                     <span className={`ml-1.5 font-mono text-[10px] ${isActive ? "opacity-70" : "opacity-50"}`}>
                       {count}
                     </span>
@@ -272,8 +257,8 @@ function Home() {
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search tools, formats…"
-                aria-label="Search tools"
+                placeholder={t("catalog.search.placeholder")}
+                aria-label={t("catalog.search.placeholder")}
                 className="w-full rounded-full border border-foreground/15 bg-background py-1.5 pl-9 pr-3 text-sm outline-none focus:border-foreground"
               />
             </div>
@@ -282,7 +267,7 @@ function Home() {
 
         {filteredGroups.length === 0 ? (
           <div className="rounded-md border border-foreground/10 p-10 text-center text-sm text-muted-foreground">
-            No To_olT tools match your search. Try clearing the filter or another keyword.
+            {t("catalog.empty")}
           </div>
         ) : (
           filteredGroups.map((group) => (
@@ -290,7 +275,7 @@ function Home() {
               <div className="mb-6 flex items-baseline justify-between border-b border-foreground/10 pb-3">
                 <h3 className="text-lg font-semibold tracking-tight">{group.title}</h3>
                 <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-                  {group.items.length} tools
+                  {t("catalog.tools.count", { n: group.items.length })}
                 </span>
               </div>
 
@@ -308,7 +293,7 @@ function Home() {
                           <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest">
                             <span className="flex items-center gap-1 rounded border border-current px-1.5 py-0.5">
                               <CalcIcon className="h-3 w-3" />
-                              Interactive
+                              {t("catalog.interactive")}
                             </span>
                           </div>
                           <ArrowUpRight className="h-4 w-4 opacity-40 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:opacity-100" />
@@ -363,8 +348,8 @@ function Home() {
       {/* Footer */}
       <footer className="border-t border-foreground/10">
         <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-2 px-6 py-8 text-xs text-muted-foreground md:flex-row md:items-center">
-          <p>© {new Date().getFullYear()} To_olT. Built with open-source libraries.</p>
-          <p className="font-mono uppercase tracking-widest">no uploads · no tracking · no limits</p>
+          <p suppressHydrationWarning>{t("footer.rights", { year: year ?? "" })}</p>
+          <p className="font-mono uppercase tracking-widest">{t("footer.motto")}</p>
         </div>
       </footer>
 

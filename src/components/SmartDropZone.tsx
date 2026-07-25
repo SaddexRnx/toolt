@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Upload, X, ArrowRight, FileIcon, Search } from "lucide-react";
 import { families, type Family } from "@/lib/converters";
+import { useT } from "@/lib/i18n";
 
 const getExt = (name: string) => {
   const m = name.match(/\.([^.]+)$/);
@@ -12,6 +13,7 @@ type Props = {
 };
 
 export function SmartDropZone({ onPick }: Props) {
+  const t = useT();
   const [files, setFiles] = useState<File[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [query, setQuery] = useState("");
@@ -60,9 +62,9 @@ export function SmartDropZone({ onPick }: Props) {
   return (
     <div className="rounded-lg border border-foreground/10 bg-foreground/[0.02] p-6 md:p-10">
       <div className="mb-6 flex items-baseline justify-between">
-        <h2 className="text-xl font-semibold tracking-tight">Smart drop</h2>
+        <h2 className="text-xl font-semibold tracking-tight">{t("smart.title")}</h2>
         <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-          drop → detect → choose
+          {t("smart.subtitle")}
         </span>
       </div>
 
@@ -86,9 +88,9 @@ export function SmartDropZone({ onPick }: Props) {
           }`}
         >
           <Upload className="h-8 w-8 opacity-60" />
-          <div className="text-base font-medium">Drop any file here — we'll detect it</div>
+          <div className="text-base font-medium">{t("smart.drop.label")}</div>
           <div className="text-sm text-muted-foreground">
-            or click to browse. Then pick from every matching tool.
+            {t("smart.drop.hint")}
           </div>
           <input
             id="smart-drop-input"
@@ -105,7 +107,7 @@ export function SmartDropZone({ onPick }: Props) {
             <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
               <FileIcon className="h-4 w-4 shrink-0 opacity-60" />
               <span className="font-medium">
-                {files.length} file{files.length > 1 ? "s" : ""}
+                {files.length === 1 ? t("smart.files", { n: files.length }) : t("smart.files.plural", { n: files.length })}
               </span>
               <span className="text-muted-foreground">·</span>
               <div className="flex flex-wrap gap-1 font-mono text-[10px] uppercase tracking-widest">
@@ -117,7 +119,7 @@ export function SmartDropZone({ onPick }: Props) {
               </div>
               <span className="text-muted-foreground">·</span>
               <span className="text-muted-foreground">
-                {matches.length} matching tool{matches.length === 1 ? "" : "s"}
+                {matches.length === 1 ? t("smart.matching", { n: matches.length }) : t("smart.matching.plural", { n: matches.length })}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -125,7 +127,7 @@ export function SmartDropZone({ onPick }: Props) {
                 htmlFor="smart-drop-input"
                 className="cursor-pointer text-xs text-muted-foreground hover:text-foreground"
               >
-                Change files
+                {t("smart.change")}
               </label>
               <input
                 id="smart-drop-input"
@@ -137,16 +139,16 @@ export function SmartDropZone({ onPick }: Props) {
               <button
                 onClick={clear}
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-                aria-label="Clear files"
+                aria-label={t("smart.clear")}
               >
-                <X className="h-3.5 w-3.5" /> Clear
+                <X className="h-3.5 w-3.5" /> {t("smart.clear")}
               </button>
             </div>
           </div>
 
           {matches.length === 0 ? (
             <div className="p-8 text-center text-sm text-muted-foreground">
-              To_olT has no tool for <span className="font-mono">{droppedExts.join(", ")}</span> yet.
+              {t("smart.none.ext", { exts: droppedExts.join(", ") })}
             </div>
           ) : (
             <div className="grid md:grid-cols-[200px_1fr]">
@@ -154,6 +156,7 @@ export function SmartDropZone({ onPick }: Props) {
               <div className="flex gap-1 overflow-x-auto border-b border-foreground/10 p-2 md:flex-col md:overflow-visible md:border-b-0 md:border-r">
                 {categories.map(([cat, count]) => {
                   const active = cat === activeCat;
+                  const label = cat === "All" ? t("catalog.category.all") : cat;
                   return (
                     <button
                       key={cat}
@@ -164,7 +167,7 @@ export function SmartDropZone({ onPick }: Props) {
                           : "text-foreground/70 hover:bg-foreground/5 hover:text-foreground"
                       }`}
                     >
-                      <span className="truncate">{cat}</span>
+                      <span className="truncate">{label}</span>
                       <span className={`font-mono text-[10px] ${active ? "opacity-70" : "opacity-50"}`}>
                         {count}
                       </span>
@@ -182,14 +185,14 @@ export function SmartDropZone({ onPick }: Props) {
                     type="search"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Filter tools or output format…"
+                    placeholder={t("smart.filter.placeholder")}
                     className="w-full rounded border border-transparent bg-transparent py-1.5 pl-8 pr-3 text-sm outline-none focus:border-foreground/20"
                   />
                 </div>
                 <div className="max-h-[420px] overflow-y-auto">
                   {filtered.length === 0 ? (
                     <div className="p-8 text-center text-sm text-muted-foreground">
-                      No To_olT tools match "{query}".
+                      {t("smart.none.query", { q: query })}
                     </div>
                   ) : (
                     <ul className="divide-y divide-foreground/5">
