@@ -83,11 +83,6 @@ const en: Dict = {
   "ui.processing": "Processing…",
   "ui.ready": "Ready",
   "ui.pending": "Pending",
-  "ui.history": "History",
-  "ui.processing": "Processing…",
-  "ui.ready": "Ready",
-  "ui.pending": "Pending",
-  "ui.error": "Error",
   "smart.hide": "Hide smart drop",
   "smart.show": "Show smart drop",
 };
