@@ -1146,7 +1146,7 @@ function Thumb({ item }: { item: QueueItem }) {
   if (item.preview) {
     return (
       <div className={box}>
-        <img src={item.preview} alt={`Preview of ${item.file.name}`} className="h-full w-full object-cover" />
+        <img src={item.preview} alt={`Thumbnail of ${item.file.name}`} className="h-full w-full object-cover" />
       </div>
     );
   }
