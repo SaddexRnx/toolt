@@ -204,3 +204,15 @@ function CopyButton({ text, label, compact }: { text: string; label?: string; co
     </button>
   );
 }
+
+function styleToCss(value: string | undefined, style: Record<string, unknown> | undefined): string {
+  // If value already contains a full CSS declaration list, prefer it.
+  if (value && /[:;]/.test(value) && value.includes(":")) return value;
+  if (!style) return value ?? "";
+  const kebab = (s: string) => s.replace(/[A-Z]/g, (m) => "-" + m.toLowerCase());
+  const lines = Object.entries(style)
+    .filter(([, v]) => v !== undefined && v !== null && v !== "")
+    .map(([k, v]) => `${kebab(k)}: ${String(v)};`);
+  const prefix = value && value.trim() ? `/* ${value} */\n` : "";
+  return prefix + lines.join("\n");
+}
