@@ -79,7 +79,7 @@ function Home() {
       <header className="border-b border-foreground/10">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
           <div className="flex items-center gap-2">
-            <div className="h-6 w-6 rounded-sm bg-foreground" />
+            <img src={tooltLogo.url} alt="To_olT logo" className="h-6 w-6" />
             <span className="text-sm font-semibold tracking-tight">To_olT</span>
           </div>
           <span className="hidden text-xs font-mono uppercase tracking-widest text-muted-foreground md:block">
