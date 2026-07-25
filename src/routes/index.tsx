@@ -79,7 +79,7 @@ function Home() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
           <div className="flex items-center gap-2">
             <div className="h-6 w-6 rounded-sm bg-foreground" />
-            <span className="text-sm font-semibold tracking-tight">monochrome</span>
+            <span className="text-sm font-semibold tracking-tight">To_olT</span>
           </div>
           <span className="hidden text-xs font-mono uppercase tracking-widest text-muted-foreground md:block">
             {total} tools · {totalOutputs} formats · 100% in-browser
