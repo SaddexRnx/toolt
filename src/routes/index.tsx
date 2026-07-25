@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { ArrowUpRight, ShieldCheck, Zap, Layers } from "lucide-react";
-import { groups, type Family } from "@/lib/converters";
+import { useMemo, useState } from "react";
+import { ArrowUpRight, ShieldCheck, Zap, Layers, Search } from "lucide-react";
+import { groups, families, type Family } from "@/lib/converters";
 import { ConverterDialog } from "@/components/ConverterDialog";
+import { SmartDropZone } from "@/components/SmartDropZone";
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -28,11 +29,48 @@ export const Route = createFileRoute("/")({
 
 function Home() {
   const [active, setActive] = useState<Family | null>(null);
-  const total = groups.reduce((n, g) => n + g.items.length, 0);
-  const totalOutputs = groups.reduce(
-    (n, g) => n + g.items.reduce((m, f) => m + (f.mode === "per-file" ? f.outputs.length : 1), 0),
+  const [initialFiles, setInitialFiles] = useState<File[] | null>(null);
+  const [category, setCategory] = useState<string>("All");
+  const [query, setQuery] = useState("");
+
+  const total = families.length;
+  const totalOutputs = families.reduce(
+    (n, f) => n + (f.mode === "per-file" ? f.outputs.length : 1),
     0,
   );
+
+  const categories = useMemo(() => ["All", ...groups.map((g) => g.title)], []);
+
+  const filteredGroups = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return groups
+      .filter((g) => category === "All" || g.title === category)
+      .map((g) => ({
+        ...g,
+        items: g.items.filter((f) => {
+          if (!q) return true;
+          if (f.title.toLowerCase().includes(q)) return true;
+          if (f.description.toLowerCase().includes(q)) return true;
+          if (f.inputExts.some((e) => e.toLowerCase().includes(q))) return true;
+          const outs = f.mode === "per-file" ? f.outputs.map((o) => o.ext) : [f.outputExt];
+          if (outs.some((e) => e.toLowerCase().includes(q))) return true;
+          return false;
+        }),
+      }))
+      .filter((g) => g.items.length > 0);
+  }, [category, query]);
+
+  const totalFiltered = filteredGroups.reduce((n, g) => n + g.items.length, 0);
+
+  const openFamily = (family: Family, files?: File[]) => {
+    setInitialFiles(files && files.length > 0 ? files : null);
+    setActive(family);
+  };
+
+  const close = () => {
+    setActive(null);
+    setInitialFiles(null);
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -50,14 +88,14 @@ function Home() {
       </header>
 
       {/* Hero */}
-      <section className="mx-auto max-w-6xl px-6 py-20 md:py-28">
+      <section className="mx-auto max-w-6xl px-6 py-20 md:py-24">
         <h1 className="text-5xl font-semibold leading-[0.95] tracking-tight md:text-7xl">
           Convert anything.
           <br />
           <span className="text-muted-foreground">Nothing leaves your device.</span>
         </h1>
         <p className="mt-6 max-w-xl text-base text-muted-foreground md:text-lg">
-          A minimal, fast file converter. Choose a format below, drop your file, get the result — all
+          A minimal, fast file converter. Drop your file, pick a target format, get the result — all
           processed locally in your browser.
         </p>
 
@@ -74,60 +112,120 @@ function Home() {
         </div>
       </section>
 
-      {/* Converter grid */}
-      <section className="mx-auto max-w-6xl px-6 pb-24">
-        {groups.map((group) => (
-          <div key={group.title} className="mb-16">
-            <div className="mb-6 flex items-baseline justify-between border-b border-foreground/10 pb-3">
-              <h2 className="text-xl font-semibold tracking-tight">{group.title}</h2>
-              <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-                {group.items.length} tools
-              </span>
-            </div>
+      {/* Smart drop */}
+      <section className="mx-auto max-w-6xl px-6 pb-16">
+        <SmartDropZone onPick={(fam, files) => openFamily(fam, files)} />
+      </section>
 
-            <div className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-foreground/10 bg-foreground/10 sm:grid-cols-2 lg:grid-cols-3">
-              {group.items.map((f) => {
-                const outs =
-                  f.mode === "per-file" ? f.outputs.map((o) => o.ext) : [f.outputExt];
+      {/* Catalog with filter + search */}
+      <section className="mx-auto max-w-6xl px-6 pb-24">
+        <div className="mb-6 flex items-baseline justify-between border-b border-foreground/10 pb-3">
+          <h2 className="text-xl font-semibold tracking-tight">All tools</h2>
+          <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
+            {totalFiltered} shown
+          </span>
+        </div>
+
+        {/* Filter bar */}
+        <div className="sticky top-0 z-10 -mx-6 mb-8 border-b border-foreground/10 bg-background/95 px-6 py-4 backdrop-blur">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-wrap gap-1.5">
+              {categories.map((cat) => {
+                const isActive = cat === category;
+                const count =
+                  cat === "All"
+                    ? total
+                    : groups.find((g) => g.title === cat)?.items.length ?? 0;
                 return (
                   <button
-                    key={f.id}
-                    onClick={() => setActive(f)}
-                    className="group flex flex-col justify-between gap-6 bg-background p-6 text-left transition-colors hover:bg-foreground hover:text-background"
+                    key={cat}
+                    onClick={() => setCategory(cat)}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                      isActive
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-foreground/15 text-foreground/70 hover:border-foreground/40 hover:text-foreground"
+                    }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex flex-wrap items-center gap-1 font-mono text-[10px] uppercase tracking-widest">
-                        {f.inputExts.slice(0, 3).map((e) => (
-                          <span key={e} className="rounded border border-current px-1.5 py-0.5">
-                            {e}
-                          </span>
-                        ))}
-                        {f.inputExts.length > 3 && (
-                          <span className="opacity-60">+{f.inputExts.length - 3}</span>
-                        )}
-                        <span className="mx-1 opacity-40">→</span>
-                        {outs.slice(0, 3).map((e) => (
-                          <span
-                            key={e}
-                            className="rounded bg-current px-1.5 py-0.5 text-background group-hover:text-foreground"
-                          >
-                            {e}
-                          </span>
-                        ))}
-                        {outs.length > 3 && <span className="opacity-60">+{outs.length - 3}</span>}
-                      </div>
-                      <ArrowUpRight className="h-4 w-4 opacity-40 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:opacity-100" />
-                    </div>
-                    <div>
-                      <div className="text-base font-medium">{f.title}</div>
-                      <p className="mt-1 line-clamp-2 text-sm opacity-60">{f.description}</p>
-                    </div>
+                    {cat}
+                    <span className={`ml-1.5 font-mono text-[10px] ${isActive ? "opacity-70" : "opacity-50"}`}>
+                      {count}
+                    </span>
                   </button>
                 );
               })}
             </div>
+
+            <div className="relative w-full md:w-72">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 opacity-50" />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search tools, formats…"
+                aria-label="Search tools"
+                className="w-full rounded-full border border-foreground/15 bg-background py-1.5 pl-9 pr-3 text-sm outline-none focus:border-foreground"
+              />
+            </div>
           </div>
-        ))}
+        </div>
+
+        {filteredGroups.length === 0 ? (
+          <div className="rounded-md border border-foreground/10 p-10 text-center text-sm text-muted-foreground">
+            No tools match your search. Try clearing the filter or another keyword.
+          </div>
+        ) : (
+          filteredGroups.map((group) => (
+            <div key={group.title} className="mb-16">
+              <div className="mb-6 flex items-baseline justify-between border-b border-foreground/10 pb-3">
+                <h3 className="text-lg font-semibold tracking-tight">{group.title}</h3>
+                <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
+                  {group.items.length} tools
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-foreground/10 bg-foreground/10 sm:grid-cols-2 lg:grid-cols-3">
+                {group.items.map((f) => {
+                  const outs = f.mode === "per-file" ? f.outputs.map((o) => o.ext) : [f.outputExt];
+                  return (
+                    <button
+                      key={f.id}
+                      onClick={() => openFamily(f)}
+                      className="group flex flex-col justify-between gap-6 bg-background p-6 text-left transition-colors hover:bg-foreground hover:text-background"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex flex-wrap items-center gap-1 font-mono text-[10px] uppercase tracking-widest">
+                          {f.inputExts.slice(0, 3).map((e) => (
+                            <span key={e} className="rounded border border-current px-1.5 py-0.5">
+                              {e}
+                            </span>
+                          ))}
+                          {f.inputExts.length > 3 && (
+                            <span className="opacity-60">+{f.inputExts.length - 3}</span>
+                          )}
+                          <span className="mx-1 opacity-40">→</span>
+                          {outs.slice(0, 3).map((e) => (
+                            <span
+                              key={e}
+                              className="rounded bg-current px-1.5 py-0.5 text-background group-hover:text-foreground"
+                            >
+                              {e}
+                            </span>
+                          ))}
+                          {outs.length > 3 && <span className="opacity-60">+{outs.length - 3}</span>}
+                        </div>
+                        <ArrowUpRight className="h-4 w-4 opacity-40 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:opacity-100" />
+                      </div>
+                      <div>
+                        <div className="text-base font-medium">{f.title}</div>
+                        <p className="mt-1 line-clamp-2 text-sm opacity-60">{f.description}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))
+        )}
       </section>
 
       {/* Footer */}
@@ -138,7 +236,7 @@ function Home() {
         </div>
       </footer>
 
-      <ConverterDialog family={active} onClose={() => setActive(null)} />
+      <ConverterDialog family={active} onClose={close} initialFiles={initialFiles} />
     </div>
   );
 }

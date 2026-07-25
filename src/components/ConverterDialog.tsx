@@ -45,7 +45,7 @@ import { OutputPreview } from "@/components/OutputPreview";
 import { cn } from "@/lib/utils";
 
 
-type Props = { family: Family | null; onClose: () => void };
+type Props = { family: Family | null; onClose: () => void; initialFiles?: File[] | null };
 
 type FileStatus =
   | { kind: "pending" }
@@ -94,7 +94,7 @@ const stripExt = (name: string) => {
 };
 
 
-export function ConverterDialog({ family, onClose }: Props) {
+export function ConverterDialog({ family, onClose, initialFiles }: Props) {
   const [items, setItems] = useState<QueueItem[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [outputIndex, setOutputIndex] = useState(0);
@@ -252,6 +252,22 @@ export function ConverterDialog({ family, onClose }: Props) {
     }
     generatePreviews(mapped);
   };
+
+  const initialConsumedRef = useRef(false);
+  useEffect(() => {
+    if (!family) {
+      initialConsumedRef.current = false;
+      return;
+    }
+    if (initialConsumedRef.current) return;
+    if (!initialFiles || initialFiles.length === 0) return;
+    initialConsumedRef.current = true;
+    const dt = new DataTransfer();
+    initialFiles.forEach((f) => dt.items.add(f));
+    acceptFiles(dt.files);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [family, initialFiles]);
+
 
   const removeItem = (id: string) => {
     setItems((prev) => {
