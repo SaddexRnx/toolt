@@ -10,20 +10,22 @@ export const Route = createFileRoute("/")({
   component: Home,
   head: () => ({
     meta: [
-      { title: "ToolT — Free browser-based file converter" },
+      { title: "To_olT — Every file tool, in your browser" },
       {
         name: "description",
         content:
-          "Convert PDF, images, spreadsheets, documents, data and archives — instantly, in your browser. No uploads, no accounts, no limits.",
+          "To_olT is the all-in-one browser toolkit: convert PDFs, images, video, audio, docs & data, plus format, hash, scan and generate — no uploads, no accounts, no limits.",
       },
-      { property: "og:title", content: "ToolT — Free browser-based file converter" },
+      { property: "og:title", content: "To_olT — Every file tool, in your browser" },
       {
         property: "og:description",
         content:
-          "Convert PDF, images, spreadsheets, documents, data and archives — instantly, in your browser. No uploads, no accounts, no limits.",
+          "To_olT is the all-in-one browser toolkit: convert PDFs, images, video, audio, docs & data, plus format, hash, scan and generate — no uploads, no accounts, no limits.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "To_olT — Every file tool, in your browser" },
+      { name: "twitter:description", content: "To_olT — every file tool, in your browser. No uploads, no accounts, no limits." },
     ],
   }),
 });
@@ -91,14 +93,15 @@ function Home() {
       {/* Hero */}
       <section className="mx-auto max-w-6xl px-6 py-20 md:py-24">
         <h1 className="text-5xl font-semibold leading-[0.95] tracking-tight md:text-7xl">
-          Every file tool.
+          To_olT.
           <br />
-          <span className="text-muted-foreground">One page. Zero uploads.</span>
+          <span className="text-muted-foreground">Every file tool. One page. Zero uploads.</span>
         </h1>
         <p className="mt-6 max-w-2xl text-base text-muted-foreground md:text-lg">
-          {total} tools · {totalOutputs} output formats. Convert, compress, merge, split, extract,
-          format, hash, scan and generate — PDFs, images, video, audio, documents, data, code and
-          config. Everything runs locally in your browser: no accounts, no uploads, no limits.
+          {total} tools · {totalOutputs} output formats. To_olT converts, compresses, merges, splits,
+          extracts, formats, hashes, scans and generates — PDFs, images, video, audio, documents,
+          data, code and config. Everything runs locally in your browser: no accounts, no uploads,
+          no limits.
         </p>
 
         <div className="mt-8 flex flex-wrap gap-1.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
@@ -207,7 +210,7 @@ function Home() {
 
         {filteredGroups.length === 0 ? (
           <div className="rounded-md border border-foreground/10 p-10 text-center text-sm text-muted-foreground">
-            No tools match your search. Try clearing the filter or another keyword.
+            No To_olT tools match your search. Try clearing the filter or another keyword.
           </div>
         ) : (
           filteredGroups.map((group) => (
