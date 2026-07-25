@@ -107,7 +107,7 @@ export function SmartDropZone({ onPick }: Props) {
             <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
               <FileIcon className="h-4 w-4 shrink-0 opacity-60" />
               <span className="font-medium">
-                {files.length} file{files.length > 1 ? "s" : ""}
+                {files.length === 1 ? t("smart.files", { n: files.length }) : t("smart.files.plural", { n: files.length })}
               </span>
               <span className="text-muted-foreground">·</span>
               <div className="flex flex-wrap gap-1 font-mono text-[10px] uppercase tracking-widest">
@@ -119,7 +119,7 @@ export function SmartDropZone({ onPick }: Props) {
               </div>
               <span className="text-muted-foreground">·</span>
               <span className="text-muted-foreground">
-                {matches.length} matching tool{matches.length === 1 ? "" : "s"}
+                {matches.length === 1 ? t("smart.matching", { n: matches.length }) : t("smart.matching.plural", { n: matches.length })}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -127,7 +127,7 @@ export function SmartDropZone({ onPick }: Props) {
                 htmlFor="smart-drop-input"
                 className="cursor-pointer text-xs text-muted-foreground hover:text-foreground"
               >
-                Change files
+                {t("smart.change")}
               </label>
               <input
                 id="smart-drop-input"
@@ -139,9 +139,9 @@ export function SmartDropZone({ onPick }: Props) {
               <button
                 onClick={clear}
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-                aria-label="Clear files"
+                aria-label={t("smart.clear")}
               >
-                <X className="h-3.5 w-3.5" /> Clear
+                <X className="h-3.5 w-3.5" /> {t("smart.clear")}
               </button>
             </div>
           </div>
