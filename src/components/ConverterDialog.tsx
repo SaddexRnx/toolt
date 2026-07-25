@@ -704,6 +704,7 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
                     type="button"
                     className="underline underline-offset-2 hover:text-foreground"
                     onClick={() => setNameMode("timestamp")}
+                    aria-label="Resolve duplicates by adding a timestamp to filenames"
                   >
                     Add timestamp
                   </button>{" "}
@@ -712,6 +713,7 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
                     type="button"
                     className="underline underline-offset-2 hover:text-foreground"
                     onClick={() => setNameMode("suffix")}
+                    aria-label="Resolve duplicates by adding a suffix to filenames"
                   >
                     Add suffix
                   </button>{" "}
