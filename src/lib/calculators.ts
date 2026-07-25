@@ -1,4 +1,5 @@
 // Interactive tools: numeric/text inputs → computed results (no file I/O).
+import { colorCalculators } from "./color-tools";
 
 export type CalcField =
   | { id: string; label: string; type: "number"; unit?: string; default?: number; min?: number; max?: number; step?: number; placeholder?: string }
@@ -7,7 +8,7 @@ export type CalcField =
   | { id: string; label: string; type: "date"; default?: string }
   | { id: string; label: string; type: "textarea"; default?: string; placeholder?: string };
 
-export type CalcResult = { label: string; value: string; hint?: string };
+export type CalcResult = { label: string; value: string; hint?: string; swatch?: string; swatches?: string[] };
 
 export type Calculator = {
   id: string;
@@ -460,6 +461,8 @@ export const calculators: Calculator[] = [
       ];
     },
   },
+  // -------- Color --------
+  ...colorCalculators,
 ];
 
 export type CalcGroup = { title: string; items: Calculator[] };
