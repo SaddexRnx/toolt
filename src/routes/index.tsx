@@ -355,6 +355,8 @@ function Home() {
       </footer>
 
       <ConverterDialog family={active} onClose={close} initialFiles={initialFiles} />
+      <CalculatorDialog calc={activeCalc} onClose={closeCalc} />
+
     </div>
   );
 }
