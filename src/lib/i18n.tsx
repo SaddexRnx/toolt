@@ -2,7 +2,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 
 export type Lang =
   | "en" | "es" | "fr" | "de" | "it" | "pt" | "nl" | "ru"
-  | "zh" | "ja" | "ko" | "ar" | "tr" | "pl" | "hi";
+  | "zh" | "ja" | "ko" | "ar" | "tr" | "pl" | "hi"
+  | "vi" | "id" | "uk" | "sv" | "cs" | "he";
 
 export const LANGUAGES: { code: Lang; label: string; native: string; rtl?: boolean }[] = [
   { code: "en", label: "English",    native: "English" },
@@ -12,14 +13,20 @@ export const LANGUAGES: { code: Lang; label: string; native: string; rtl?: boole
   { code: "it", label: "Italian",    native: "Italiano" },
   { code: "pt", label: "Portuguese", native: "Português" },
   { code: "nl", label: "Dutch",      native: "Nederlands" },
+  { code: "sv", label: "Swedish",    native: "Svenska" },
+  { code: "pl", label: "Polish",     native: "Polski" },
+  { code: "cs", label: "Czech",      native: "Čeština" },
+  { code: "uk", label: "Ukrainian",  native: "Українська" },
   { code: "ru", label: "Russian",    native: "Русский" },
+  { code: "tr", label: "Turkish",    native: "Türkçe" },
+  { code: "ar", label: "Arabic",     native: "العربية", rtl: true },
+  { code: "he", label: "Hebrew",     native: "עברית", rtl: true },
+  { code: "hi", label: "Hindi",      native: "हिन्दी" },
+  { code: "id", label: "Indonesian", native: "Bahasa Indonesia" },
+  { code: "vi", label: "Vietnamese", native: "Tiếng Việt" },
   { code: "zh", label: "Chinese",    native: "中文" },
   { code: "ja", label: "Japanese",   native: "日本語" },
   { code: "ko", label: "Korean",     native: "한국어" },
-  { code: "ar", label: "Arabic",     native: "العربية", rtl: true },
-  { code: "tr", label: "Turkish",    native: "Türkçe" },
-  { code: "pl", label: "Polish",     native: "Polski" },
-  { code: "hi", label: "Hindi",      native: "हिन्दी" },
 ];
 
 type Dict = Record<string, string>;
