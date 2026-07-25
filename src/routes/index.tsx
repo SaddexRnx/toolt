@@ -142,12 +142,15 @@ function Home() {
           <div className="flex items-center gap-2">
             <img src={tooltLogo.url} alt="To_olT logo" className="h-6 w-6" />
             <span className="text-sm font-semibold tracking-tight">To_olT</span>
+            <span className="brand-dot-sm ml-1" aria-hidden />
           </div>
-          <span className="hidden text-xs font-mono uppercase tracking-widest text-muted-foreground md:block">
+          <span className="hidden items-center gap-2 text-xs font-mono uppercase tracking-widest text-muted-foreground md:flex">
+            <span className="brand-dot-sm" aria-hidden />
             {total} tools · {totalOutputs} formats · 100% in-browser
           </span>
         </div>
       </header>
+
 
       {/* Hero */}
       <main>
