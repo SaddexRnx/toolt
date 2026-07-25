@@ -275,7 +275,7 @@ function Home() {
               <div className="mb-6 flex items-baseline justify-between border-b border-foreground/10 pb-3">
                 <h3 className="text-lg font-semibold tracking-tight">{group.title}</h3>
                 <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-                  {group.items.length} tools
+                  {t("catalog.tools.count", { n: group.items.length })}
                 </span>
               </div>
 
