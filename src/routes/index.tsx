@@ -142,21 +142,29 @@ function Home() {
           <div className="flex items-center gap-2">
             <img src={tooltLogo.url} alt="To_olT logo" className="h-6 w-6" />
             <span className="text-sm font-semibold tracking-tight">To_olT</span>
+            <span className="brand-dot-sm ml-1" aria-hidden />
           </div>
-          <span className="hidden text-xs font-mono uppercase tracking-widest text-muted-foreground md:block">
+          <span className="hidden items-center gap-2 text-xs font-mono uppercase tracking-widest text-muted-foreground md:flex">
+            <span className="brand-dot-sm" aria-hidden />
             {total} tools · {totalOutputs} formats · 100% in-browser
           </span>
         </div>
       </header>
 
+
       {/* Hero */}
       <main>
       <section className="mx-auto max-w-6xl px-6 py-20 md:py-24">
-        <h1 className="text-5xl font-semibold leading-[0.95] tracking-tight md:text-7xl">
-          To_olT.
+        <div className="brand-rise mb-5 inline-flex items-center gap-2 rounded-full border border-foreground/15 px-3 py-1 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+          <span className="brand-dot-sm" aria-hidden />
+          Live · runs entirely in your browser
+        </div>
+        <h1 className="brand-rise text-5xl font-semibold leading-[0.95] tracking-tight md:text-7xl">
+          To_olT<span style={{ color: "var(--brand)" }}>.</span>
           <br />
           <span className="text-muted-foreground">Every file tool. One page. Zero uploads.</span>
         </h1>
+
         <p className="mt-6 max-w-2xl text-base text-muted-foreground md:text-lg">
           {total} tools · {totalOutputs} output formats. To_olT converts, compresses, merges, splits,
           extracts, formats, hashes, scans and generates — PDFs, images, video, audio, documents,
@@ -219,11 +227,15 @@ function Home() {
       {/* Catalog with filter + search */}
       <section className="mx-auto max-w-6xl px-6 pb-24">
         <div className="mb-6 flex items-baseline justify-between border-b border-foreground/10 pb-3">
-          <h2 className="text-xl font-semibold tracking-tight">All tools</h2>
+          <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight">
+            <span className="brand-dot-sm" aria-hidden />
+            All tools
+          </h2>
           <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
             {totalFiltered} shown
           </span>
         </div>
+
 
         {/* Filter bar */}
         <div className="sticky top-0 z-10 -mx-6 mb-8 border-b border-foreground/10 bg-background/95 px-6 py-4 backdrop-blur">
@@ -309,7 +321,8 @@ function Home() {
                     );
                   }
                   const f = item.family;
-                  const outs = f.mode === "per-file" ? f.outputs.map((o) => o.ext) : [f.outputExt];
+                  const outs = Array.from(new Set(f.mode === "per-file" ? f.outputs.map((o) => o.ext) : [f.outputExt]));
+                  const ins = Array.from(new Set(f.inputExts));
                   return (
                     <button
                       key={f.id}
@@ -318,16 +331,17 @@ function Home() {
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex flex-wrap items-center gap-1 font-mono text-[10px] uppercase tracking-widest">
-                          {f.inputExts.slice(0, 3).map((e) => (
-                            <span key={e} className="rounded border border-current px-1.5 py-0.5">{e}</span>
+                          {ins.slice(0, 3).map((e) => (
+                            <span key={`in-${e}`} className="rounded border border-current px-1.5 py-0.5">{e}</span>
                           ))}
-                          {f.inputExts.length > 3 && <span className="opacity-60">+{f.inputExts.length - 3}</span>}
+                          {ins.length > 3 && <span className="opacity-60">+{ins.length - 3}</span>}
                           <span className="mx-1 opacity-40">→</span>
                           {outs.slice(0, 3).map((e) => (
-                            <span key={e} className="rounded bg-current px-1.5 py-0.5 text-background group-hover:text-foreground">{e}</span>
+                            <span key={`out-${e}`} className="rounded bg-current px-1.5 py-0.5 text-background group-hover:text-foreground">{e}</span>
                           ))}
                           {outs.length > 3 && <span className="opacity-60">+{outs.length - 3}</span>}
                         </div>
+
                         <ArrowUpRight className="h-4 w-4 opacity-40 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:opacity-100" />
                       </div>
                       <div>
@@ -365,7 +379,10 @@ function Feature({ icon, title, children }: { icon: React.ReactNode; title: stri
   return (
     <div>
       <div className="mb-2 flex items-center gap-2 text-sm font-medium">
-        <span className="flex h-6 w-6 items-center justify-center rounded border border-foreground/20">
+        <span
+          className="flex h-6 w-6 items-center justify-center rounded border"
+          style={{ borderColor: "var(--brand)", color: "var(--brand)" }}
+        >
           {icon}
         </span>
         {title}
@@ -374,3 +391,4 @@ function Feature({ icon, title, children }: { icon: React.ReactNode; title: stri
     </div>
   );
 }
+

@@ -2937,7 +2937,7 @@ export const families: Family[] = [
     ],
   },
   {
-    id: "csv-merge",
+    id: "csv-merge-v2",
     category: "Data",
     title: "Merge CSV files",
     description: "Concatenate multiple CSVs. The first file's header is kept.",
@@ -3087,7 +3087,7 @@ export const families: Family[] = [
   // MORE DOCUMENTS / TEXT
   // ============================================================
   {
-    id: "text-stats",
+    id: "text-stats-v2",
     category: "Documents",
     title: "Word & character counter",
     description: "Count characters, words, lines and reading time for any text file.",
@@ -4183,7 +4183,7 @@ export const families: Family[] = [
     ],
   },
   {
-    id: "html-entities",
+    id: "html-entities-v2",
     category: "Encoders",
     title: "HTML entities encode / decode",
     description: "Escape < > & \" ' to entities, or decode HTML entities back to text.",
