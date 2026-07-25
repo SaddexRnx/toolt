@@ -66,18 +66,22 @@ export function CalculatorDialog({ calc, onClose }: Props) {
                     )}
                     <span className="text-lg font-semibold tabular-nums break-all">{r.value}</span>
                     {r.hint && <span className="ml-1 text-xs text-muted-foreground">{r.hint}</span>}
+                    <CopyButton text={r.value} label={r.label} />
                   </span>
                 </div>
                 {r.swatches && r.swatches.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap items-center gap-1.5">
                     {r.swatches.map((c, j) => (
-                      <span
+                      <button
                         key={j}
-                        title={c}
-                        className="h-8 w-8 rounded border border-foreground/20"
+                        type="button"
+                        title={`Copy ${c}`}
+                        onClick={() => navigator.clipboard?.writeText(c)}
+                        className="h-8 w-8 rounded border border-foreground/20 transition hover:scale-110"
                         style={{ backgroundColor: c }}
                       />
                     ))}
+                    <CopyButton text={r.swatches.join(", ")} label="palette" compact />
                   </div>
                 )}
               </div>
