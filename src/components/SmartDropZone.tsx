@@ -13,6 +13,7 @@ type Props = {
 };
 
 export function SmartDropZone({ onPick }: Props) {
+  const t = useT();
   const [files, setFiles] = useState<File[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [query, setQuery] = useState("");
