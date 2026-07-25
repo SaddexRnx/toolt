@@ -2184,6 +2184,300 @@ export const families: Family[] = [
       },
     ],
   },
+
+  // ============================================================
+  // VIDEO (ffmpeg.wasm — heavy first load, ~30MB)
+  // ============================================================
+  {
+    id: "video-convert",
+    category: "Video",
+    title: "Convert video",
+    description: "Re-encode video into MP4, WEBM or MOV. Uses ffmpeg.wasm (large first-load).",
+    accept: "video/*,.mp4,.webm,.mov,.mkv,.avi,.m4v",
+    inputExts: ["MP4", "WEBM", "MOV", "MKV", "AVI", "M4V"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "MP4",
+        label: "MP4 (H.264 + AAC)",
+        description: "Widely compatible MP4 container with H.264 video and AAC audio.",
+        run: async (file) => {
+          const { runFFmpeg } = await import("./ffmpeg");
+          return runFFmpeg(file, (i, o) => ["-i", i, "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-c:a", "aac", "-b:a", "128k", o], "MP4", "video/mp4");
+        },
+      },
+      {
+        ext: "WEBM",
+        label: "WEBM (VP9 + Opus)",
+        description: "Open WebM container with VP9 video and Opus audio.",
+        run: async (file) => {
+          const { runFFmpeg } = await import("./ffmpeg");
+          return runFFmpeg(file, (i, o) => ["-i", i, "-c:v", "libvpx-vp9", "-b:v", "1M", "-c:a", "libopus", "-b:a", "96k", o], "WEBM", "video/webm");
+        },
+      },
+      {
+        ext: "MOV",
+        label: "MOV (H.264 + AAC)",
+        description: "QuickTime container with H.264 + AAC.",
+        run: async (file) => {
+          const { runFFmpeg } = await import("./ffmpeg");
+          return runFFmpeg(file, (i, o) => ["-i", i, "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-c:a", "aac", o], "MOV", "video/quicktime");
+        },
+      },
+    ],
+  },
+  {
+    id: "video-compress",
+    category: "Video",
+    title: "Compress video",
+    description: "Shrink video size with H.264 (CRF 28). Good quality, smaller file.",
+    accept: "video/*",
+    inputExts: ["MP4", "WEBM", "MOV", "MKV", "AVI", "M4V"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "MP4",
+        label: "Compressed MP4",
+        description: "H.264 CRF 28 + 96k AAC audio.",
+        run: async (file) => {
+          const { runFFmpeg } = await import("./ffmpeg");
+          return runFFmpeg(file, (i, o) => ["-i", i, "-c:v", "libx264", "-preset", "veryfast", "-crf", "28", "-c:a", "aac", "-b:a", "96k", o], "MP4", "video/mp4");
+        },
+      },
+    ],
+  },
+  {
+    id: "video-mute",
+    category: "Video",
+    title: "Mute video",
+    description: "Remove the audio track from a video, keeping the picture intact.",
+    accept: "video/*",
+    inputExts: ["MP4", "WEBM", "MOV", "MKV", "AVI", "M4V"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "MP4",
+        label: "Muted MP4",
+        description: "Original video stream, audio stripped.",
+        run: async (file) => {
+          const { runFFmpeg } = await import("./ffmpeg");
+          return runFFmpeg(file, (i, o) => ["-i", i, "-c:v", "copy", "-an", o], "MP4", "video/mp4");
+        },
+      },
+    ],
+  },
+  {
+    id: "video-to-gif",
+    category: "Video",
+    title: "Video → GIF",
+    description: "Convert the first 5 seconds of a video into an animated GIF (10fps, 480px wide).",
+    accept: "video/*",
+    inputExts: ["MP4", "WEBM", "MOV", "MKV", "AVI", "M4V"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "GIF",
+        label: "Animated GIF",
+        description: "First 5 seconds, 10fps, scaled to 480px wide.",
+        run: async (file) => {
+          const { runFFmpeg } = await import("./ffmpeg");
+          return runFFmpeg(
+            file,
+            (i, o) => ["-t", "5", "-i", i, "-vf", "fps=10,scale=480:-1:flags=lanczos", o],
+            "GIF",
+            "image/gif",
+          );
+        },
+      },
+    ],
+  },
+  {
+    id: "video-extract-frame",
+    category: "Video",
+    title: "Extract first frame",
+    description: "Pull the very first frame of a video as a PNG or JPG image.",
+    accept: "video/*",
+    inputExts: ["MP4", "WEBM", "MOV", "MKV", "AVI", "M4V"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "PNG",
+        label: "Frame → PNG",
+        description: "Lossless PNG snapshot of frame 1.",
+        run: async (file) => {
+          const { runFFmpeg } = await import("./ffmpeg");
+          return runFFmpeg(file, (i, o) => ["-i", i, "-frames:v", "1", o], "PNG", "image/png");
+        },
+      },
+      {
+        ext: "JPG",
+        label: "Frame → JPG",
+        description: "Smaller JPEG snapshot of frame 1.",
+        run: async (file) => {
+          const { runFFmpeg } = await import("./ffmpeg");
+          return runFFmpeg(file, (i, o) => ["-i", i, "-frames:v", "1", "-q:v", "3", o], "JPG", "image/jpeg");
+        },
+      },
+    ],
+  },
+  {
+    id: "video-to-audio",
+    category: "Video",
+    title: "Video → Audio",
+    description: "Extract the audio track from any video as MP3, WAV or OGG.",
+    accept: "video/*",
+    inputExts: ["MP4", "WEBM", "MOV", "MKV", "AVI", "M4V"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "MP3",
+        label: "MP3 (192kbps)",
+        description: "Extracted audio encoded as MP3 at 192kbps.",
+        run: async (file) => {
+          const { runFFmpeg } = await import("./ffmpeg");
+          return runFFmpeg(file, (i, o) => ["-i", i, "-vn", "-c:a", "libmp3lame", "-b:a", "192k", o], "MP3", "audio/mpeg");
+        },
+      },
+      {
+        ext: "WAV",
+        label: "WAV (uncompressed)",
+        description: "Extracted audio as PCM WAV.",
+        run: async (file) => {
+          const { runFFmpeg } = await import("./ffmpeg");
+          return runFFmpeg(file, (i, o) => ["-i", i, "-vn", o], "WAV", "audio/wav");
+        },
+      },
+      {
+        ext: "OGG",
+        label: "OGG (Vorbis)",
+        description: "Extracted audio as OGG Vorbis.",
+        run: async (file) => {
+          const { runFFmpeg } = await import("./ffmpeg");
+          return runFFmpeg(file, (i, o) => ["-i", i, "-vn", "-c:a", "libvorbis", "-q:a", "5", o], "OGG", "audio/ogg");
+        },
+      },
+    ],
+  },
+
+  // ============================================================
+  // AUDIO (ffmpeg.wasm)
+  // ============================================================
+  {
+    id: "audio-convert",
+    category: "Audio",
+    title: "Convert audio",
+    description: "Re-encode audio into MP3, WAV, OGG, M4A or FLAC.",
+    accept: "audio/*,.mp3,.wav,.ogg,.m4a,.aac,.flac,.opus,.wma",
+    inputExts: ["MP3", "WAV", "OGG", "M4A", "AAC", "FLAC", "OPUS", "WMA"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "MP3",
+        label: "MP3 (192kbps)",
+        description: "Universally compatible MP3 at 192kbps.",
+        run: async (file) => {
+          const { runFFmpeg } = await import("./ffmpeg");
+          return runFFmpeg(file, (i, o) => ["-i", i, "-c:a", "libmp3lame", "-b:a", "192k", o], "MP3", "audio/mpeg");
+        },
+      },
+      {
+        ext: "WAV",
+        label: "WAV (PCM)",
+        description: "Lossless PCM WAV.",
+        run: async (file) => {
+          const { runFFmpeg } = await import("./ffmpeg");
+          return runFFmpeg(file, (i, o) => ["-i", i, o], "WAV", "audio/wav");
+        },
+      },
+      {
+        ext: "OGG",
+        label: "OGG (Vorbis)",
+        description: "Open Vorbis-encoded OGG.",
+        run: async (file) => {
+          const { runFFmpeg } = await import("./ffmpeg");
+          return runFFmpeg(file, (i, o) => ["-i", i, "-c:a", "libvorbis", "-q:a", "5", o], "OGG", "audio/ogg");
+        },
+      },
+      {
+        ext: "M4A",
+        label: "M4A (AAC)",
+        description: "AAC audio in an MP4 container.",
+        run: async (file) => {
+          const { runFFmpeg } = await import("./ffmpeg");
+          return runFFmpeg(file, (i, o) => ["-i", i, "-c:a", "aac", "-b:a", "192k", o], "M4A", "audio/mp4");
+        },
+      },
+      {
+        ext: "FLAC",
+        label: "FLAC (lossless)",
+        description: "Lossless FLAC compression.",
+        run: async (file) => {
+          const { runFFmpeg } = await import("./ffmpeg");
+          return runFFmpeg(file, (i, o) => ["-i", i, "-c:a", "flac", o], "FLAC", "audio/flac");
+        },
+      },
+    ],
+  },
+  {
+    id: "audio-compress",
+    category: "Audio",
+    title: "Compress audio",
+    description: "Shrink audio size by re-encoding to MP3 at 96kbps mono.",
+    accept: "audio/*",
+    inputExts: ["MP3", "WAV", "OGG", "M4A", "AAC", "FLAC", "OPUS", "WMA"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "MP3",
+        label: "Compressed MP3",
+        description: "Mono MP3 at 96kbps — small, voice-friendly.",
+        run: async (file) => {
+          const { runFFmpeg } = await import("./ffmpeg");
+          return runFFmpeg(file, (i, o) => ["-i", i, "-ac", "1", "-c:a", "libmp3lame", "-b:a", "96k", o], "MP3", "audio/mpeg");
+        },
+      },
+    ],
+  },
+  {
+    id: "audio-normalize",
+    category: "Audio",
+    title: "Normalize audio",
+    description: "Even out loudness with EBU R128 loudness normalization.",
+    accept: "audio/*",
+    inputExts: ["MP3", "WAV", "OGG", "M4A", "AAC", "FLAC", "OPUS", "WMA"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "MP3",
+        label: "Normalized MP3",
+        description: "Loudness normalized (loudnorm), re-encoded to MP3 192kbps.",
+        run: async (file) => {
+          const { runFFmpeg } = await import("./ffmpeg");
+          return runFFmpeg(file, (i, o) => ["-i", i, "-af", "loudnorm", "-c:a", "libmp3lame", "-b:a", "192k", o], "MP3", "audio/mpeg");
+        },
+      },
+    ],
+  },
+  {
+    id: "audio-reverse",
+    category: "Audio",
+    title: "Reverse audio",
+    description: "Play audio backwards. Fun for stingers and secret-messages.",
+    accept: "audio/*",
+    inputExts: ["MP3", "WAV", "OGG", "M4A", "AAC", "FLAC", "OPUS", "WMA"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "MP3",
+        label: "Reversed MP3",
+        description: "Reversed audio encoded as MP3 192kbps.",
+        run: async (file) => {
+          const { runFFmpeg } = await import("./ffmpeg");
+          return runFFmpeg(file, (i, o) => ["-i", i, "-af", "areverse", "-c:a", "libmp3lame", "-b:a", "192k", o], "MP3", "audio/mpeg");
+        },
+      },
+    ],
+  },
 ];
 
 export type FamilyGroup = { title: string; items: Family[] };
