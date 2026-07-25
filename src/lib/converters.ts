@@ -2478,6 +2478,148 @@ export const families: Family[] = [
       },
     ],
   },
+
+  // ============================================================
+  // AI (large first-load — models cached after first use)
+  // ============================================================
+  {
+    id: "ocr-image",
+    category: "AI",
+    title: "OCR: image → text",
+    description: "Extract text from an image using Tesseract.js (English). ~15MB one-time download.",
+    accept: "image/*",
+    inputExts: ["PNG", "JPG", "JPEG", "WEBP", "BMP", "GIF", "TIFF", "TIF"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "TXT",
+        label: "Plain text",
+        description: "Recognized text as a UTF-8 .txt file.",
+        run: async (file) => {
+          const { recognize } = await import("tesseract.js");
+          const { data } = await recognize(file, "eng");
+          return {
+            blob: new Blob([data.text], { type: "text/plain" }),
+            filename: `${stripExt(file.name)}.txt`,
+          };
+        },
+      },
+    ],
+  },
+  {
+    id: "ocr-pdf",
+    category: "AI",
+    title: "OCR: PDF → text",
+    description: "Render each PDF page and OCR it. Great for scanned PDFs. Slow on large files.",
+    accept: ".pdf,application/pdf",
+    inputExts: ["PDF"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "TXT",
+        label: "Plain text",
+        description: "Concatenated OCR text of every page.",
+        run: async (file) => {
+          const pdfjs = await import("pdfjs-dist");
+          const workerUrl = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
+          (pdfjs as unknown as { GlobalWorkerOptions: { workerSrc: string } }).GlobalWorkerOptions.workerSrc = workerUrl;
+          const { createWorker } = await import("tesseract.js");
+          const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+          const worker = await createWorker("eng");
+          const parts: string[] = [];
+          try {
+            for (let i = 1; i <= doc.numPages; i++) {
+              const page = await doc.getPage(i);
+              const viewport = page.getViewport({ scale: 2 });
+              const canvas = document.createElement("canvas");
+              canvas.width = Math.ceil(viewport.width);
+              canvas.height = Math.ceil(viewport.height);
+              const ctx = canvas.getContext("2d")!;
+              await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+              const blob: Blob = await new Promise((res, rej) =>
+                canvas.toBlob((b) => (b ? res(b) : rej(new Error("encode failed"))), "image/png"),
+              );
+              const { data } = await worker.recognize(blob);
+              parts.push(`\n\n--- Page ${i} ---\n${data.text}`);
+            }
+          } finally {
+            await worker.terminate();
+            await doc.cleanup();
+          }
+          return {
+            blob: new Blob([parts.join("\n")], { type: "text/plain" }),
+            filename: `${stripExt(file.name)}.txt`,
+          };
+        },
+      },
+    ],
+  },
+  {
+    id: "remove-bg",
+    category: "AI",
+    title: "Remove background",
+    description: "AI-powered background removal to a transparent PNG. ~40MB one-time model download.",
+    accept: "image/*",
+    inputExts: ["PNG", "JPG", "JPEG", "WEBP", "BMP"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "PNG",
+        label: "Cutout PNG",
+        description: "Subject on a transparent background, encoded as PNG.",
+        run: async (file) => {
+          const { removeBackground } = await import("@imgly/background-removal");
+          const blob = await removeBackground(file);
+          return { blob, filename: `${stripExt(file.name)}-cutout.png` };
+        },
+      },
+    ],
+  },
+  {
+    id: "upscale-image",
+    category: "AI",
+    title: "Upscale image",
+    description: "Enlarge an image 2× or 4× using high-quality Lanczos resampling.",
+    accept: "image/*",
+    inputExts: ["PNG", "JPG", "JPEG", "WEBP", "BMP", "GIF"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "PNG",
+        label: "2× upscale (PNG)",
+        description: "Doubled dimensions with high-quality smoothing.",
+        run: async (file) => {
+          const src = await imageToCanvas(file);
+          const dst = document.createElement("canvas");
+          dst.width = src.width * 2;
+          dst.height = src.height * 2;
+          const ctx = dst.getContext("2d")!;
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = "high";
+          ctx.drawImage(src, 0, 0, dst.width, dst.height);
+          const blob = await canvasToBlob(dst, "image/png");
+          return { blob, filename: `${stripExt(file.name)}@2x.png` };
+        },
+      },
+      {
+        ext: "PNG",
+        label: "4× upscale (PNG)",
+        description: "Quadrupled dimensions with high-quality smoothing.",
+        run: async (file) => {
+          const src = await imageToCanvas(file);
+          const dst = document.createElement("canvas");
+          dst.width = src.width * 4;
+          dst.height = src.height * 4;
+          const ctx = dst.getContext("2d")!;
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = "high";
+          ctx.drawImage(src, 0, 0, dst.width, dst.height);
+          const blob = await canvasToBlob(dst, "image/png");
+          return { blob, filename: `${stripExt(file.name)}@4x.png` };
+        },
+      },
+    ],
+  },
 ];
 
 export type FamilyGroup = { title: string; items: Family[] };
