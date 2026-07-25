@@ -253,6 +253,22 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
     generatePreviews(mapped);
   };
 
+  const initialConsumedRef = useRef(false);
+  useEffect(() => {
+    if (!family) {
+      initialConsumedRef.current = false;
+      return;
+    }
+    if (initialConsumedRef.current) return;
+    if (!initialFiles || initialFiles.length === 0) return;
+    initialConsumedRef.current = true;
+    const dt = new DataTransfer();
+    initialFiles.forEach((f) => dt.items.add(f));
+    acceptFiles(dt.files);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [family, initialFiles]);
+
+
   const removeItem = (id: string) => {
     setItems((prev) => {
       const it = prev.find((i) => i.id === id);
