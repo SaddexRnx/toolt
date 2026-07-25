@@ -90,24 +90,59 @@ function Home() {
       {/* Hero */}
       <section className="mx-auto max-w-6xl px-6 py-20 md:py-24">
         <h1 className="text-5xl font-semibold leading-[0.95] tracking-tight md:text-7xl">
-          Convert anything.
+          Every file tool.
           <br />
-          <span className="text-muted-foreground">Nothing leaves your device.</span>
+          <span className="text-muted-foreground">One page. Zero uploads.</span>
         </h1>
-        <p className="mt-6 max-w-xl text-base text-muted-foreground md:text-lg">
-          A minimal, fast file converter. Drop your file, pick a target format, get the result — all
-          processed locally in your browser.
+        <p className="mt-6 max-w-2xl text-base text-muted-foreground md:text-lg">
+          {total} tools · {totalOutputs} output formats. Convert, compress, merge, split, extract,
+          format, hash, scan and generate — PDFs, images, video, audio, documents, data, code and
+          config. Everything runs locally in your browser: no accounts, no uploads, no limits.
         </p>
 
+        <div className="mt-8 flex flex-wrap gap-1.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+          {[
+            "PDF",
+            "Images",
+            "Video",
+            "Audio",
+            "Documents",
+            "Spreadsheets",
+            "Data",
+            "Archives",
+            "Encoders",
+            "Hashes",
+            "JSON",
+            "YAML / TOML",
+            "HTML / CSS",
+            "SQL",
+            "Regex",
+            "JWT",
+            "UUID",
+            "Cron",
+            "Kubernetes",
+            "Git",
+            "Barcodes / QR",
+            "OCR",
+            "Background removal",
+            "Upscale",
+            "Secrets scanner",
+          ].map((t) => (
+            <span key={t} className="rounded border border-foreground/15 px-1.5 py-0.5">
+              {t}
+            </span>
+          ))}
+        </div>
+
         <div className="mt-10 grid grid-cols-1 gap-6 border-t border-foreground/10 pt-8 sm:grid-cols-3">
-          <Feature icon={<ShieldCheck className="h-4 w-4" />} title="Private">
-            Files never touch a server. Everything runs in your browser.
+          <Feature icon={<ShieldCheck className="h-4 w-4" />} title="Private by design">
+            Files never touch a server. Every byte is processed on your device.
           </Feature>
-          <Feature icon={<Zap className="h-4 w-4" />} title="Instant">
-            No queue, no wait. Conversion starts the moment you drop.
+          <Feature icon={<Zap className="h-4 w-4" />} title="Instant & batchable">
+            Drop one file or a hundred. Preview, retry, rename, ZIP or download one-by-one.
           </Feature>
-          <Feature icon={<Layers className="h-4 w-4" />} title="Open source">
-            Powered by open-source libraries. No API keys, no accounts, no limits.
+          <Feature icon={<Layers className="h-4 w-4" />} title="Open source stack">
+            pdf-lib, pdf.js, SheetJS, ffmpeg.wasm, tesseract.js and more. No API keys.
           </Feature>
         </div>
       </section>
