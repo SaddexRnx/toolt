@@ -154,3 +154,49 @@ a[href*="lovable.dev"][target="_blank"] {
   pointer-events: none !important;
 }
 
+/* Brand accent — solid green (no gradients). */
+:root {
+  --brand: oklch(0.72 0.18 148);
+  --brand-soft: oklch(0.72 0.18 148 / 0.18);
+}
+.dark {
+  --brand: oklch(0.78 0.19 148);
+  --brand-soft: oklch(0.78 0.19 148 / 0.22);
+}
+@theme inline {
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+}
+
+/* Brand dot with a soft pulsing halo (single solid color, no gradient). */
+@keyframes brand-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--brand-soft); }
+  50%      { box-shadow: 0 0 0 6px transparent; }
+}
+@utility brand-dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background-color: var(--brand);
+  animation: brand-pulse 2s ease-in-out infinite;
+}
+@utility brand-dot-sm {
+  display: inline-block;
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background-color: var(--brand);
+  animation: brand-pulse 2.4s ease-in-out infinite;
+}
+
+/* Gentle fade+rise for hero elements. */
+@keyframes brand-rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@utility brand-rise {
+  animation: brand-rise 0.5s ease-out both;
+}
+
+
