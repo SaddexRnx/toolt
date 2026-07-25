@@ -555,6 +555,77 @@ export const families: Family[] = [
     ],
   },
   {
+    id: "pdf-to-word",
+    category: "PDF",
+    title: "PDF → Word",
+    description: "Convert a PDF's text layer into an editable Word (.docx) or Rich Text (.rtf) document — one paragraph per PDF page.",
+    accept: "application/pdf",
+    inputExts: ["PDF"],
+    mode: "per-file",
+    outputs: [
+      {
+        ext: "DOCX",
+        label: "Word document (.docx)",
+        description: "Editable .docx with a heading per page and paragraphs of extracted text.",
+        run: async (file) => {
+          const pdfjs = await loadPdfjs();
+          const { Document, Packer, Paragraph, TextRun, HeadingLevel } = await import("docx");
+          const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+          const children: InstanceType<typeof Paragraph>[] = [];
+          for (let i = 1; i <= doc.numPages; i++) {
+            const page = await doc.getPage(i);
+            const tc = await page.getTextContent();
+            const lines: string[] = [];
+            let current = "";
+            let lastY: number | null = null;
+            for (const it of tc.items) {
+              if (!("str" in it)) continue;
+              const y = Array.isArray((it as { transform?: number[] }).transform)
+                ? (it as { transform: number[] }).transform[5]
+                : null;
+              if (lastY !== null && y !== null && Math.abs(y - lastY) > 2) {
+                if (current.trim()) lines.push(current.trim());
+                current = "";
+              }
+              current += (current ? " " : "") + it.str;
+              lastY = y;
+            }
+            if (current.trim()) lines.push(current.trim());
+            children.push(
+              new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun(`Page ${i}`)] }),
+            );
+            for (const line of lines) {
+              children.push(new Paragraph({ children: [new TextRun(line)] }));
+            }
+            children.push(new Paragraph({ children: [new TextRun("")] }));
+          }
+          const docx = new Document({ sections: [{ children }] });
+          const blob = await Packer.toBlob(docx);
+          return { blob, filename: `${stripExt(file.name)}.docx` };
+        },
+      },
+      {
+        ext: "RTF",
+        label: "Rich Text (.rtf)",
+        description: "Universally editable Rich Text — opens in Word, Pages and LibreOffice.",
+        run: async (file) => {
+          const pdfjs = await loadPdfjs();
+          const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+          const esc = (s: string) => s.replace(/\\/g, "\\\\").replace(/[{}]/g, (c) => `\\${c}`).replace(/[\u0080-\uFFFF]/g, (c) => `\\u${c.charCodeAt(0)}?`);
+          const parts: string[] = [`{\\rtf1\\ansi\\deff0`];
+          for (let i = 1; i <= doc.numPages; i++) {
+            const page = await doc.getPage(i);
+            const tc = await page.getTextContent();
+            const text = tc.items.map((it) => ("str" in it ? it.str : "")).join(" ");
+            parts.push(`\\b Page ${i}\\b0\\par ${esc(text)}\\par\\par`);
+          }
+          parts.push(`}`);
+          return { blob: new Blob([parts.join("\n")], { type: "application/rtf" }), filename: `${stripExt(file.name)}.rtf` };
+        },
+      },
+    ],
+  },
+  {
     id: "pdf-metadata-strip",
     category: "PDF",
     title: "Strip PDF metadata",
