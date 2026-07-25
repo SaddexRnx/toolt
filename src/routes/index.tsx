@@ -155,11 +155,16 @@ function Home() {
       {/* Hero */}
       <main>
       <section className="mx-auto max-w-6xl px-6 py-20 md:py-24">
-        <h1 className="text-5xl font-semibold leading-[0.95] tracking-tight md:text-7xl">
-          To_olT.
+        <div className="brand-rise mb-5 inline-flex items-center gap-2 rounded-full border border-foreground/15 px-3 py-1 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+          <span className="brand-dot-sm" aria-hidden />
+          Live · runs entirely in your browser
+        </div>
+        <h1 className="brand-rise text-5xl font-semibold leading-[0.95] tracking-tight md:text-7xl">
+          To_olT<span style={{ color: "var(--brand)" }}>.</span>
           <br />
           <span className="text-muted-foreground">Every file tool. One page. Zero uploads.</span>
         </h1>
+
         <p className="mt-6 max-w-2xl text-base text-muted-foreground md:text-lg">
           {total} tools · {totalOutputs} output formats. To_olT converts, compresses, merges, splits,
           extracts, formats, hashes, scans and generates — PDFs, images, video, audio, documents,
