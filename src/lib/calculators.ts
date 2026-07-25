@@ -460,6 +460,8 @@ export const calculators: Calculator[] = [
       ];
     },
   },
+  // -------- Color --------
+  ...colorCalculators,
 ];
 
 export type CalcGroup = { title: string; items: Calculator[] };
