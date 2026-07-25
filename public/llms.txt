@@ -7,6 +7,7 @@ To_olT is a single-page web app that bundles 100+ file tools grouped into famili
 ## Pages
 
 - [Home](/): Full catalog with smart drop zone, search and category filters for every tool.
+- [PDF to Word](/pdf-to-word): Convert PDF to editable Word (.docx) or Rich Text (.rtf) in-browser.
 
 ## Optional
 
