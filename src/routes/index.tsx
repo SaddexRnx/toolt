@@ -293,7 +293,7 @@ function Home() {
                           <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest">
                             <span className="flex items-center gap-1 rounded border border-current px-1.5 py-0.5">
                               <CalcIcon className="h-3 w-3" />
-                              Interactive
+                              {t("catalog.interactive")}
                             </span>
                           </div>
                           <ArrowUpRight className="h-4 w-4 opacity-40 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:opacity-100" />
