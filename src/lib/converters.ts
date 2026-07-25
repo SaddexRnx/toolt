@@ -2567,12 +2567,15 @@ export const families: Family[] = [
         label: "Plain text",
         description: "Recognized text as a UTF-8 .txt file.",
         run: async (file) => {
-          const { recognize } = await import("tesseract.js");
-          const { data } = await recognize(file, "eng");
-          return {
-            blob: new Blob([data.text], { type: "text/plain" }),
-            filename: `${stripExt(file.name)}.txt`,
-          };
+          const { withConcurrency, LIMITS } = await import("./limits");
+          return withConcurrency(LIMITS.tesseract.key, LIMITS.tesseract.max, async () => {
+            const { recognize } = await import("tesseract.js");
+            const { data } = await recognize(file, "eng");
+            return {
+              blob: new Blob([data.text], { type: "text/plain" }),
+              filename: `${stripExt(file.name)}.txt`,
+            };
+          });
         },
       },
     ],
