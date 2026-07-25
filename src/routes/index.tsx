@@ -76,6 +76,21 @@ function Home() {
   const [initialFiles, setInitialFiles] = useState<File[] | null>(null);
   const [category, setCategory] = useState<string>("All");
   const [query, setQuery] = useState("");
+  const [smartOpen, setSmartOpen] = useState(true);
+  useEffect(() => {
+    try {
+      const hidden = localStorage.getItem("toolt.smartHidden") === "1";
+      if (hidden) setSmartOpen(false);
+    } catch { /* ignore */ }
+  }, []);
+  const hideSmart = () => {
+    setSmartOpen(false);
+    try { localStorage.setItem("toolt.smartHidden", "1"); } catch { /* ignore */ }
+  };
+  const showSmart = () => {
+    setSmartOpen(true);
+    try { localStorage.setItem("toolt.smartHidden", "0"); } catch { /* ignore */ }
+  };
   // Compute year on client only to avoid SSR/client mismatch across year rollovers.
   const [year, setYear] = useState<number | null>(null);
   useEffect(() => setYear(new Date().getFullYear()), []);
@@ -205,7 +220,19 @@ function Home() {
 
       {/* Smart drop */}
       <section className="mx-auto max-w-6xl px-6 pb-16">
-        <SmartDropZone onPick={(fam, files) => openFamily(fam, files)} />
+        {smartOpen ? (
+          <SmartDropZone
+            onPick={(fam, files) => openFamily(fam, files)}
+            onHide={hideSmart}
+          />
+        ) : (
+          <button
+            onClick={showSmart}
+            className="w-full rounded-lg border border-dashed border-foreground/15 px-4 py-3 text-xs font-mono uppercase tracking-widest text-muted-foreground transition-colors hover:border-foreground/40 hover:text-foreground"
+          >
+            + {t("smart.show")}
+          </button>
+        )}
       </section>
 
       {/* Catalog with filter + search */}
@@ -287,20 +314,20 @@ function Home() {
                       <button
                         key={`calc-${c.id}`}
                         onClick={() => openCalc(c)}
-                        className="group flex flex-col justify-between gap-6 bg-background p-6 text-left transition-colors hover:bg-foreground hover:text-background"
+                        className="tool-card group flex flex-col justify-between gap-6 bg-background p-6 text-left"
                       >
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest">
-                            <span className="flex items-center gap-1 rounded border border-current px-1.5 py-0.5">
+                          <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                            <span className="flex items-center gap-1 rounded border border-foreground/20 px-1.5 py-0.5">
                               <CalcIcon className="h-3 w-3" />
                               {t("catalog.interactive")}
                             </span>
                           </div>
-                          <ArrowUpRight className="h-4 w-4 opacity-40 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:opacity-100" />
+                          <ArrowUpRight className="h-4 w-4 text-muted-foreground transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-[color:var(--brand)]" />
                         </div>
                         <div>
                           <div className="text-base font-medium">{c.title}</div>
-                          <p className="mt-1 line-clamp-2 text-sm opacity-60">{c.description}</p>
+                          <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{c.description}</p>
                         </div>
                       </button>
                     );
@@ -312,26 +339,26 @@ function Home() {
                     <button
                       key={f.id}
                       onClick={() => openFamily(f)}
-                      className="group flex flex-col justify-between gap-6 bg-background p-6 text-left transition-colors hover:bg-foreground hover:text-background"
+                      className="tool-card group flex flex-col justify-between gap-6 bg-background p-6 text-left"
                     >
                       <div className="flex items-center justify-between">
-                        <div className="flex flex-wrap items-center gap-1 font-mono text-[10px] uppercase tracking-widest">
+                        <div className="flex flex-wrap items-center gap-1 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
                           {ins.slice(0, 3).map((e) => (
-                            <span key={`in-${e}`} className="rounded border border-current px-1.5 py-0.5">{e}</span>
+                            <span key={`in-${e}`} className="rounded border border-foreground/20 px-1.5 py-0.5">{e}</span>
                           ))}
                           {ins.length > 3 && <span className="opacity-60">+{ins.length - 3}</span>}
                           <span className="mx-1 opacity-40">→</span>
                           {outs.slice(0, 3).map((e) => (
-                            <span key={`out-${e}`} className="rounded bg-current px-1.5 py-0.5 text-background group-hover:text-foreground">{e}</span>
+                            <span key={`out-${e}`} className="rounded bg-foreground/10 px-1.5 py-0.5 text-foreground">{e}</span>
                           ))}
                           {outs.length > 3 && <span className="opacity-60">+{outs.length - 3}</span>}
                         </div>
 
-                        <ArrowUpRight className="h-4 w-4 opacity-40 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:opacity-100" />
+                        <ArrowUpRight className="h-4 w-4 text-muted-foreground transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-[color:var(--brand)]" />
                       </div>
                       <div>
                         <div className="text-base font-medium">{f.title}</div>
-                        <p className="mt-1 line-clamp-2 text-sm opacity-60">{f.description}</p>
+                        <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{f.description}</p>
                       </div>
                     </button>
                   );

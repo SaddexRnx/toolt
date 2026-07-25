@@ -10,9 +10,10 @@ const getExt = (name: string) => {
 
 type Props = {
   onPick: (family: Family, files: File[]) => void;
+  onHide?: () => void;
 };
 
-export function SmartDropZone({ onPick }: Props) {
+export function SmartDropZone({ onPick, onHide }: Props) {
   const t = useT();
   const [files, setFiles] = useState<File[]>([]);
   const [dragOver, setDragOver] = useState(false);
@@ -60,12 +61,27 @@ export function SmartDropZone({ onPick }: Props) {
   const clear = () => setFiles([]);
 
   return (
-    <div className="rounded-lg border border-foreground/10 bg-foreground/[0.02] p-6 md:p-10">
-      <div className="mb-6 flex items-baseline justify-between">
-        <h2 className="text-xl font-semibold tracking-tight">{t("smart.title")}</h2>
-        <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-          {t("smart.subtitle")}
-        </span>
+    <div className="rounded-lg border border-foreground/10 bg-foreground/[0.02] p-4 sm:p-6 md:p-10">
+      <div className="mb-4 flex items-center justify-between gap-3 sm:mb-6">
+        <div className="min-w-0">
+          <h2 className="truncate text-lg font-semibold tracking-tight sm:text-xl">
+            {t("smart.title")}
+          </h2>
+          <span className="mt-0.5 block font-mono text-[10px] uppercase tracking-widest text-muted-foreground sm:text-xs">
+            {t("smart.subtitle")}
+          </span>
+        </div>
+        {onHide && (
+          <button
+            type="button"
+            onClick={onHide}
+            aria-label={t("smart.hide")}
+            title={t("smart.hide")}
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-foreground/15 text-foreground/70 transition-colors hover:border-foreground/40 hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       {files.length === 0 ? (
@@ -81,15 +97,15 @@ export function SmartDropZone({ onPick }: Props) {
             setDragOver(false);
             handleFiles(e.dataTransfer.files);
           }}
-          className={`flex cursor-pointer flex-col items-center justify-center gap-3 rounded-md border-2 border-dashed p-10 text-center transition-colors ${
+          className={`flex cursor-pointer flex-col items-center justify-center gap-3 rounded-md border-2 border-dashed p-6 text-center transition-colors sm:p-10 ${
             dragOver
               ? "border-foreground bg-foreground/5"
               : "border-foreground/20 hover:border-foreground/50 hover:bg-foreground/[0.03]"
           }`}
         >
-          <Upload className="h-8 w-8 opacity-60" />
-          <div className="text-base font-medium">{t("smart.drop.label")}</div>
-          <div className="text-sm text-muted-foreground">
+          <Upload className="h-7 w-7 opacity-60 sm:h-8 sm:w-8" />
+          <div className="text-sm font-medium sm:text-base">{t("smart.drop.label")}</div>
+          <div className="text-xs text-muted-foreground sm:text-sm">
             {t("smart.drop.hint")}
           </div>
           <input
@@ -102,27 +118,34 @@ export function SmartDropZone({ onPick }: Props) {
         </label>
       ) : (
         <div className="overflow-hidden rounded-md border border-foreground/10 bg-background">
-          {/* File bar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-foreground/10 px-4 py-3">
-            <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
+          {/* File bar — grid on mobile, flex on desktop */}
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-foreground/10 px-3 py-2.5 sm:flex sm:flex-wrap sm:justify-between sm:px-4 sm:py-3">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs sm:text-sm">
               <FileIcon className="h-4 w-4 shrink-0 opacity-60" />
               <span className="font-medium">
-                {files.length === 1 ? t("smart.files", { n: files.length }) : t("smart.files.plural", { n: files.length })}
+                {files.length === 1
+                  ? t("smart.files", { n: files.length })
+                  : t("smart.files.plural", { n: files.length })}
               </span>
-              <span className="text-muted-foreground">·</span>
+              <span className="hidden text-muted-foreground sm:inline">·</span>
               <div className="flex flex-wrap gap-1 font-mono text-[10px] uppercase tracking-widest">
-                {droppedExts.map((e) => (
+                {droppedExts.slice(0, 4).map((e) => (
                   <span key={e} className="rounded border border-foreground/20 px-1.5 py-0.5">
                     {e || "?"}
                   </span>
                 ))}
+                {droppedExts.length > 4 && (
+                  <span className="opacity-60">+{droppedExts.length - 4}</span>
+                )}
               </div>
-              <span className="text-muted-foreground">·</span>
-              <span className="text-muted-foreground">
-                {matches.length === 1 ? t("smart.matching", { n: matches.length }) : t("smart.matching.plural", { n: matches.length })}
+              <span className="hidden text-muted-foreground sm:inline">·</span>
+              <span className="w-full text-muted-foreground sm:w-auto">
+                {matches.length === 1
+                  ? t("smart.matching", { n: matches.length })
+                  : t("smart.matching.plural", { n: matches.length })}
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-2">
               <label
                 htmlFor="smart-drop-input"
                 className="cursor-pointer text-xs text-muted-foreground hover:text-foreground"
@@ -141,13 +164,13 @@ export function SmartDropZone({ onPick }: Props) {
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
                 aria-label={t("smart.clear")}
               >
-                <X className="h-3.5 w-3.5" /> {t("smart.clear")}
+                <X className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{t("smart.clear")}</span>
               </button>
             </div>
           </div>
 
           {matches.length === 0 ? (
-            <div className="p-8 text-center text-sm text-muted-foreground">
+            <div className="p-6 text-center text-sm text-muted-foreground sm:p-8">
               {t("smart.none.ext", { exts: droppedExts.join(", ") })}
             </div>
           ) : (
@@ -177,11 +200,10 @@ export function SmartDropZone({ onPick }: Props) {
               </div>
 
               {/* Results list */}
-              <div className="flex flex-col">
+              <div className="flex min-w-0 flex-col">
                 <div className="relative border-b border-foreground/10 p-2">
                   <Search className="pointer-events-none absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 opacity-50" />
                   <input
-                    autoFocus
                     type="search"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
@@ -189,9 +211,9 @@ export function SmartDropZone({ onPick }: Props) {
                     className="w-full rounded border border-transparent bg-transparent py-1.5 pl-8 pr-3 text-sm outline-none focus:border-foreground/20"
                   />
                 </div>
-                <div className="max-h-[420px] overflow-y-auto">
+                <div className="max-h-[60vh] overflow-y-auto md:max-h-[420px]">
                   {filtered.length === 0 ? (
-                    <div className="p-8 text-center text-sm text-muted-foreground">
+                    <div className="p-6 text-center text-sm text-muted-foreground sm:p-8">
                       {t("smart.none.query", { q: query })}
                     </div>
                   ) : (
@@ -203,22 +225,22 @@ export function SmartDropZone({ onPick }: Props) {
                           <li key={f.id}>
                             <button
                               onClick={() => onPick(f, files)}
-                              className="group flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-foreground hover:text-background"
+                              className="group flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-foreground/5 sm:px-4"
                             >
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-baseline gap-2">
                                   <span className="truncate text-sm font-medium">{f.title}</span>
-                                  <span className="hidden font-mono text-[10px] uppercase tracking-widest opacity-50 sm:inline">
+                                  <span className="hidden font-mono text-[10px] uppercase tracking-widest text-muted-foreground sm:inline">
                                     {f.category}
                                   </span>
                                 </div>
-                                <p className="line-clamp-1 text-xs opacity-60">{f.description}</p>
+                                <p className="line-clamp-1 text-xs text-muted-foreground">{f.description}</p>
                               </div>
-                              <div className="flex shrink-0 flex-wrap items-center justify-end gap-1 font-mono text-[10px] uppercase tracking-widest">
+                              <div className="hidden shrink-0 flex-wrap items-center justify-end gap-1 font-mono text-[10px] uppercase tracking-widest sm:flex">
                                 {outs.slice(0, 4).map((e) => (
                                   <span
                                     key={e}
-                                    className="rounded bg-foreground/10 px-1.5 py-0.5 group-hover:bg-background/20"
+                                    className="rounded bg-foreground/10 px-1.5 py-0.5"
                                   >
                                     {e}
                                   </span>
