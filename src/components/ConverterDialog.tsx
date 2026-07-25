@@ -669,6 +669,13 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
                       className="h-7 px-2 font-mono text-[11px]"
                       onClick={() => setPageRange(p)}
                       disabled={isRunning}
+                      aria-label={
+                        p === "all"
+                          ? "Select all pages"
+                          : p === "first"
+                            ? "Select first page only"
+                            : "Select pages 1 to 5"
+                      }
                     >
                       {p}
                     </Button>
