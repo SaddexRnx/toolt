@@ -54,21 +54,69 @@ export function CalculatorDialog({ calc, onClose }: Props) {
             <div className="text-xs font-mono uppercase tracking-widest text-muted-foreground">Results</div>
             {results.map((r, i) => (
               <div key={i} className="space-y-2 border-b border-foreground/5 pb-2 last:border-0">
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="text-sm text-muted-foreground">{r.label}</span>
-                  <span className="flex items-center gap-2 text-right">
-                    {r.swatch && (
-                      <span
-                        aria-hidden
-                        className="inline-block h-5 w-5 rounded border border-foreground/20"
-                        style={{ backgroundColor: r.swatch }}
-                      />
-                    )}
-                    <span className="text-lg font-semibold tabular-nums break-all">{r.value}</span>
-                    {r.hint && <span className="ml-1 text-xs text-muted-foreground">{r.hint}</span>}
-                    <CopyButton text={r.value} label={r.label} />
-                  </span>
-                </div>
+                {r.preview ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">{r.label}</span>
+                      {r.value && <span className="text-xs font-mono text-muted-foreground">{r.value}</span>}
+                    </div>
+                    <div
+                      className="flex min-h-[140px] w-full items-center justify-center overflow-hidden rounded-md border border-foreground/10 p-4"
+                      style={{ background: r.preview.bg ?? "#ffffff" }}
+                    >
+                      {r.preview.children ? (
+                        <div style={{ ...(r.preview.style as React.CSSProperties), width: "100%" }}>
+                          {Array.from({ length: r.preview.children }).map((_, k) => (
+                            <div
+                              key={k}
+                              style={{
+                                background: `hsl(${(k * 47) % 360} 70% 60%)`,
+                                color: "#fff",
+                                padding: "12px 16px",
+                                borderRadius: "6px",
+                                fontSize: "13px",
+                                fontWeight: 600,
+                                textAlign: "center",
+                                minWidth: "48px",
+                              }}
+                            >
+                              {k + 1}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div
+                          style={{
+                            ...(r.preview.style as React.CSSProperties),
+                            minWidth: r.preview.text && r.preview.text.trim() ? undefined : "120px",
+                            minHeight: r.preview.text && r.preview.text.trim() ? undefined : "80px",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          {r.preview.text ?? ""}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="text-sm text-muted-foreground">{r.label}</span>
+                    <span className="flex items-center gap-2 text-right">
+                      {r.swatch && (
+                        <span
+                          aria-hidden
+                          className="inline-block h-5 w-5 rounded border border-foreground/20"
+                          style={{ backgroundColor: r.swatch }}
+                        />
+                      )}
+                      <span className="whitespace-pre-wrap text-left text-sm font-mono tabular-nums break-all">{r.value}</span>
+                      {r.hint && <span className="ml-1 text-xs text-muted-foreground">{r.hint}</span>}
+                      <CopyButton text={r.value} label={r.label} />
+                    </span>
+                  </div>
+                )}
                 {r.swatches && r.swatches.length > 0 && (
                   <div className="flex flex-wrap items-center gap-1.5">
                     {r.swatches.map((c, j) => (
