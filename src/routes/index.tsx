@@ -10,20 +10,22 @@ export const Route = createFileRoute("/")({
   component: Home,
   head: () => ({
     meta: [
-      { title: "ToolT — Free browser-based file converter" },
+      { title: "To_olT — Every file tool, in your browser" },
       {
         name: "description",
         content:
-          "Convert PDF, images, spreadsheets, documents, data and archives — instantly, in your browser. No uploads, no accounts, no limits.",
+          "To_olT is the all-in-one browser toolkit: convert PDFs, images, video, audio, docs & data, plus format, hash, scan and generate — no uploads, no accounts, no limits.",
       },
-      { property: "og:title", content: "ToolT — Free browser-based file converter" },
+      { property: "og:title", content: "To_olT — Every file tool, in your browser" },
       {
         property: "og:description",
         content:
-          "Convert PDF, images, spreadsheets, documents, data and archives — instantly, in your browser. No uploads, no accounts, no limits.",
+          "To_olT is the all-in-one browser toolkit: convert PDFs, images, video, audio, docs & data, plus format, hash, scan and generate — no uploads, no accounts, no limits.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "To_olT — Every file tool, in your browser" },
+      { name: "twitter:description", content: "To_olT — every file tool, in your browser. No uploads, no accounts, no limits." },
     ],
   }),
 });
