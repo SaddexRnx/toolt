@@ -62,9 +62,9 @@ export function SmartDropZone({ onPick }: Props) {
   return (
     <div className="rounded-lg border border-foreground/10 bg-foreground/[0.02] p-6 md:p-10">
       <div className="mb-6 flex items-baseline justify-between">
-        <h2 className="text-xl font-semibold tracking-tight">Smart drop</h2>
+        <h2 className="text-xl font-semibold tracking-tight">{t("smart.title")}</h2>
         <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-          drop → detect → choose
+          {t("smart.subtitle")}
         </span>
       </div>
 
