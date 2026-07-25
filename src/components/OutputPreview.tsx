@@ -105,7 +105,7 @@ export function OutputPreview({ open, onClose, blob, filename, onDownload }: Pro
             <div className="flex items-start justify-center overflow-auto">
               <img
                 src={url}
-                alt="Output preview"
+                alt="Converted output image"
                 style={{ transform: `scale(${zoom})`, transformOrigin: "top center" }}
                 className="max-h-none transition-transform"
               />
