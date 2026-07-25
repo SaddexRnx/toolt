@@ -373,7 +373,10 @@ function Feature({ icon, title, children }: { icon: React.ReactNode; title: stri
   return (
     <div>
       <div className="mb-2 flex items-center gap-2 text-sm font-medium">
-        <span className="flex h-6 w-6 items-center justify-center rounded border border-foreground/20">
+        <span
+          className="flex h-6 w-6 items-center justify-center rounded border"
+          style={{ borderColor: "var(--brand)", color: "var(--brand)" }}
+        >
           {icon}
         </span>
         {title}
@@ -382,3 +385,4 @@ function Feature({ icon, title, children }: { icon: React.ReactNode; title: stri
     </div>
   );
 }
+
