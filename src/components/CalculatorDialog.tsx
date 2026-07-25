@@ -52,12 +52,33 @@ export function CalculatorDialog({ calc, onClose }: Props) {
           <div className="space-y-3 rounded-lg border border-foreground/10 bg-foreground/[0.02] p-5">
             <div className="text-xs font-mono uppercase tracking-widest text-muted-foreground">Results</div>
             {results.map((r, i) => (
-              <div key={i} className="flex items-baseline justify-between gap-3 border-b border-foreground/5 pb-2 last:border-0">
-                <span className="text-sm text-muted-foreground">{r.label}</span>
-                <span className="text-right">
-                  <span className="text-lg font-semibold tabular-nums">{r.value}</span>
-                  {r.hint && <span className="ml-2 text-xs text-muted-foreground">{r.hint}</span>}
-                </span>
+              <div key={i} className="space-y-2 border-b border-foreground/5 pb-2 last:border-0">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-sm text-muted-foreground">{r.label}</span>
+                  <span className="flex items-center gap-2 text-right">
+                    {r.swatch && (
+                      <span
+                        aria-hidden
+                        className="inline-block h-5 w-5 rounded border border-foreground/20"
+                        style={{ backgroundColor: r.swatch }}
+                      />
+                    )}
+                    <span className="text-lg font-semibold tabular-nums break-all">{r.value}</span>
+                    {r.hint && <span className="ml-1 text-xs text-muted-foreground">{r.hint}</span>}
+                  </span>
+                </div>
+                {r.swatches && r.swatches.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {r.swatches.map((c, j) => (
+                      <span
+                        key={j}
+                        title={c}
+                        className="h-8 w-8 rounded border border-foreground/20"
+                        style={{ backgroundColor: c }}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
