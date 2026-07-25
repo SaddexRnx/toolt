@@ -45,7 +45,7 @@ import { OutputPreview } from "@/components/OutputPreview";
 import { cn } from "@/lib/utils";
 
 
-type Props = { family: Family | null; onClose: () => void };
+type Props = { family: Family | null; onClose: () => void; initialFiles?: File[] | null };
 
 type FileStatus =
   | { kind: "pending" }
