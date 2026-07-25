@@ -88,9 +88,9 @@ export function SmartDropZone({ onPick }: Props) {
           }`}
         >
           <Upload className="h-8 w-8 opacity-60" />
-          <div className="text-base font-medium">Drop any file here — we'll detect it</div>
+          <div className="text-base font-medium">{t("smart.drop.label")}</div>
           <div className="text-sm text-muted-foreground">
-            or click to browse. Then pick from every matching tool.
+            {t("smart.drop.hint")}
           </div>
           <input
             id="smart-drop-input"
