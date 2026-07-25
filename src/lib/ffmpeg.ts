@@ -1,9 +1,11 @@
 // Lazy singleton loader for ffmpeg.wasm (single-threaded core — no COOP/COEP needed).
-// Uses Vite ?url imports so the core JS/WASM ship as static assets.
+// The core JS + WASM are loaded from a public CDN (unpkg) so the ~30MB binary
+// never has to ship in this repo. Browsers cache it after the first load.
 import { FFmpeg } from "@ffmpeg/ffmpeg";
-import { fetchFile } from "@ffmpeg/util";
-import coreURL from "@ffmpeg/core/dist/umd/ffmpeg-core.js?url";
-import wasmURL from "@ffmpeg/core/dist/umd/ffmpeg-core.wasm?url";
+import { fetchFile, toBlobURL } from "@ffmpeg/util";
+
+const CORE_VERSION = "0.12.10";
+const CORE_BASE = `https://unpkg.com/@ffmpeg/core@${CORE_VERSION}/dist/umd`;
 
 let instance: FFmpeg | null = null;
 let loading: Promise<FFmpeg> | null = null;
@@ -13,6 +15,10 @@ export async function getFFmpeg(): Promise<FFmpeg> {
   if (loading) return loading;
   loading = (async () => {
     const ff = new FFmpeg();
+    const [coreURL, wasmURL] = await Promise.all([
+      toBlobURL(`${CORE_BASE}/ffmpeg-core.js`, "text/javascript"),
+      toBlobURL(`${CORE_BASE}/ffmpeg-core.wasm`, "application/wasm"),
+    ]);
     await ff.load({ coreURL, wasmURL });
     instance = ff;
     return ff;
