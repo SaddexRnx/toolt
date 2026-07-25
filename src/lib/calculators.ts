@@ -1,4 +1,5 @@
 // Interactive tools: numeric/text inputs → computed results (no file I/O).
+import { colorCalculators } from "./color-tools";
 
 export type CalcField =
   | { id: string; label: string; type: "number"; unit?: string; default?: number; min?: number; max?: number; step?: number; placeholder?: string }
