@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import type { Family, OutputOption } from "@/lib/converters";
 import { isAcceptedFile } from "@/lib/converters";
+import { limitForFamily, formatBytes, guardCooldown, markRan } from "@/lib/limits";
 import { canPreview, makePreview } from "@/lib/preview";
 import { parsePageRange, validatePageRange } from "@/lib/pdf-range";
 import {
@@ -233,13 +234,30 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
   const acceptFiles = (list: FileList | null) => {
     if (!list || list.length === 0) return;
     const arr = Array.from(list);
-    const mapped: QueueItem[] = arr.map((file) => ({
-      id: nextId(),
-      file,
-      status: isAcceptedFile(family, file)
-        ? { kind: "pending" }
-        : { kind: "rejected", reason: `Unsupported type — expected ${family.inputExts.join(", ")}` },
-    }));
+    const sizeLimit = limitForFamily({ category: family.category, familyId: family.id });
+    const mapped: QueueItem[] = arr.map((file) => {
+      if (!isAcceptedFile(family, file)) {
+        return {
+          id: nextId(),
+          file,
+          status: {
+            kind: "rejected" as const,
+            reason: `Unsupported type — expected ${family.inputExts.join(", ")}`,
+          },
+        };
+      }
+      if (file.size > sizeLimit) {
+        return {
+          id: nextId(),
+          file,
+          status: {
+            kind: "rejected" as const,
+            reason: `File is ${formatBytes(file.size)} — this tool accepts up to ${formatBytes(sizeLimit)}.`,
+          },
+        };
+      }
+      return { id: nextId(), file, status: { kind: "pending" as const } };
+    });
     autoPickOutput(arr);
     if (family.mode === "combine") {
       setItems((prev) => {
@@ -339,6 +357,20 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
 
   const convertOne = async (item: QueueItem) => {
     if (family.mode !== "per-file" || !selectedOutput) return;
+    // Debounce accidental double-clicks and stuck keys per tool.
+    try {
+      guardCooldown(`convert:${family.id}`, 250);
+    } catch (e) {
+      setItems((prev) =>
+        prev.map((i) =>
+          i.id === item.id
+            ? { ...i, status: { kind: "error", message: e instanceof Error ? e.message : String(e) } }
+            : i,
+        ),
+      );
+      return;
+    }
+    markRan(`convert:${family.id}`);
     setItems((prev) =>
       prev.map((i) => {
         if (i.id !== item.id) return i;

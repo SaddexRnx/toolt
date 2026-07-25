@@ -2594,36 +2594,39 @@ export const families: Family[] = [
         label: "Plain text",
         description: "Concatenated OCR text of every page.",
         run: async (file) => {
-          const pdfjs = await import("pdfjs-dist");
-          const workerUrl = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
-          (pdfjs as unknown as { GlobalWorkerOptions: { workerSrc: string } }).GlobalWorkerOptions.workerSrc = workerUrl;
-          const { createWorker } = await import("tesseract.js");
-          const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
-          const worker = await createWorker("eng");
-          const parts: string[] = [];
-          try {
-            for (let i = 1; i <= doc.numPages; i++) {
-              const page = await doc.getPage(i);
-              const viewport = page.getViewport({ scale: 2 });
-              const canvas = document.createElement("canvas");
-              canvas.width = Math.ceil(viewport.width);
-              canvas.height = Math.ceil(viewport.height);
-              const ctx = canvas.getContext("2d")!;
-              await page.render({ canvasContext: ctx, viewport, canvas }).promise;
-              const blob: Blob = await new Promise((res, rej) =>
-                canvas.toBlob((b) => (b ? res(b) : rej(new Error("encode failed"))), "image/png"),
-              );
-              const { data } = await worker.recognize(blob);
-              parts.push(`\n\n--- Page ${i} ---\n${data.text}`);
+          const { withConcurrency, LIMITS } = await import("./limits");
+          return withConcurrency(LIMITS.tesseract.key, LIMITS.tesseract.max, async () => {
+            const pdfjs = await import("pdfjs-dist");
+            const workerUrl = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
+            (pdfjs as unknown as { GlobalWorkerOptions: { workerSrc: string } }).GlobalWorkerOptions.workerSrc = workerUrl;
+            const { createWorker } = await import("tesseract.js");
+            const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+            const worker = await createWorker("eng");
+            const parts: string[] = [];
+            try {
+              for (let i = 1; i <= doc.numPages; i++) {
+                const page = await doc.getPage(i);
+                const viewport = page.getViewport({ scale: 2 });
+                const canvas = document.createElement("canvas");
+                canvas.width = Math.ceil(viewport.width);
+                canvas.height = Math.ceil(viewport.height);
+                const ctx = canvas.getContext("2d")!;
+                await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+                const blob: Blob = await new Promise((res, rej) =>
+                  canvas.toBlob((b) => (b ? res(b) : rej(new Error("encode failed"))), "image/png"),
+                );
+                const { data } = await worker.recognize(blob);
+                parts.push(`\n\n--- Page ${i} ---\n${data.text}`);
+              }
+            } finally {
+              await worker.terminate();
+              await doc.cleanup();
             }
-          } finally {
-            await worker.terminate();
-            await doc.cleanup();
-          }
-          return {
-            blob: new Blob([parts.join("\n")], { type: "text/plain" }),
-            filename: `${stripExt(file.name)}.txt`,
-          };
+            return {
+              blob: new Blob([parts.join("\n")], { type: "text/plain" }),
+              filename: `${stripExt(file.name)}.txt`,
+            };
+          });
         },
       },
     ],
@@ -2642,9 +2645,12 @@ export const families: Family[] = [
         label: "Cutout PNG",
         description: "Subject on a transparent background, encoded as PNG.",
         run: async (file) => {
-          const { removeBackground } = await import("@imgly/background-removal");
-          const blob = await removeBackground(file);
-          return { blob, filename: `${stripExt(file.name)}-cutout.png` };
+          const { withConcurrency, LIMITS } = await import("./limits");
+          return withConcurrency(LIMITS.bgRemoval.key, LIMITS.bgRemoval.max, async () => {
+            const { removeBackground } = await import("@imgly/background-removal");
+            const blob = await removeBackground(file);
+            return { blob, filename: `${stripExt(file.name)}-cutout.png` };
+          });
         },
       },
     ],
