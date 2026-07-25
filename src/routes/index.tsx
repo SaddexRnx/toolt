@@ -227,11 +227,15 @@ function Home() {
       {/* Catalog with filter + search */}
       <section className="mx-auto max-w-6xl px-6 pb-24">
         <div className="mb-6 flex items-baseline justify-between border-b border-foreground/10 pb-3">
-          <h2 className="text-xl font-semibold tracking-tight">All tools</h2>
+          <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight">
+            <span className="brand-dot-sm" aria-hidden />
+            All tools
+          </h2>
           <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
             {totalFiltered} shown
           </span>
         </div>
+
 
         {/* Filter bar */}
         <div className="sticky top-0 z-10 -mx-6 mb-8 border-b border-foreground/10 bg-background/95 px-6 py-4 backdrop-blur">
