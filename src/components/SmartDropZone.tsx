@@ -146,7 +146,7 @@ export function SmartDropZone({ onPick }: Props) {
 
           {matches.length === 0 ? (
             <div className="p-8 text-center text-sm text-muted-foreground">
-              No tools accept <span className="font-mono">{droppedExts.join(", ")}</span> yet.
+              To_olT has no tool for <span className="font-mono">{droppedExts.join(", ")}</span> yet.
             </div>
           ) : (
             <div className="grid md:grid-cols-[200px_1fr]">
