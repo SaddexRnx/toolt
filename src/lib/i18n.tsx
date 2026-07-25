@@ -586,7 +586,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     try { localStorage.setItem("toolt.lang", l); } catch { /* ignore */ }
   }, []);
 
-  const dir = LANGUAGES.find((l) => l.code === lang)?.rtl ? "rtl" : "ltr";
+  const dir: "ltr" | "rtl" = LANGUAGES.find((l) => l.code === lang)?.rtl ? "rtl" : "ltr";
 
   useEffect(() => {
     if (typeof document === "undefined") return;
