@@ -154,23 +154,23 @@ The entire app is a static front-end plus a thin SSR shell. Heavy work is isolat
 
 ```mermaid
 flowchart LR
-  A[Drop, paste or pick] --> B[Tool registry<br/>catalog.ts]
-  B --> C{Engine router}
-  C -->|PDF| D[pdf-lib · pdf.js]
-  C -->|Images| E[Canvas · heic2any · image compression]
-  C -->|Media| F[ffmpeg.wasm]
-  C -->|Vision| G[tesseract.js · background removal]
-  C -->|Docs & data| H[SheetJS · mammoth · Papa Parse · YAML/TOML]
-  C -->|Interactive| I[Pure TypeScript calculators]
-  D --> J[Preview · batch queue · retry · rename]
+  A["Drop, paste or pick"] --> B["Tool registry / catalog.ts"]
+  B --> C{"Engine router"}
+  C -->|PDF| D["pdf-lib / pdf.js"]
+  C -->|Images| E["Canvas / heic2any / compression"]
+  C -->|Media| F["ffmpeg.wasm"]
+  C -->|Vision| G["tesseract.js / background removal"]
+  C -->|Docs| H["SheetJS / mammoth / Papa Parse"]
+  C -->|Interactive| I["TypeScript calculators"]
+  D --> J["Preview / batch queue / retry / rename"]
   E --> J
   F --> J
   G --> J
   H --> J
   I --> J
-  J --> K[(IndexedDB history)]
-  J --> L[Download · ZIP export]
-  L --> M[Stays on your device]
+  J --> K["IndexedDB history"]
+  J --> L["Download / ZIP export"]
+  L --> M["Stays on your device"]
 ```
 
 ### Stack
