@@ -39,13 +39,7 @@ import { isAcceptedFile } from "@/lib/converters";
 import { limitForFamily, formatBytes, guardCooldown, markRan, guardFileSize } from "@/lib/limits";
 import { canPreview, makePreview } from "@/lib/preview";
 import { parsePageRange, validatePageRange } from "@/lib/pdf-range";
-import {
-  loadHistory,
-  saveEntry,
-  removeEntry,
-  getBlob,
-  type HistoryEntry,
-} from "@/lib/history";
+import { loadHistory, saveEntry, removeEntry, getBlob, type HistoryEntry } from "@/lib/history";
 
 import { OutputPreview } from "@/components/OutputPreview";
 import { cn } from "@/lib/utils";
@@ -460,20 +454,23 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
     ext: string,
     label: string,
   ) => {
-    saveEntry({
-      familyId: family.id,
-      familyTitle: family.title,
-      category: family.category,
-      inputName: input.name,
-      inputSize: input.size,
-      outputExt: ext,
-      outputLabel: label,
-      outputFilename: applyNameMode(result.filename, nameMode, nameSuffix),
-      outputSize: result.blob.size,
-      nameMode,
-      nameSuffix: nameMode === "suffix" ? nameSuffix : undefined,
-      pageRange: isPdfSplit ? pageRange : undefined,
-    }, result.blob);
+    saveEntry(
+      {
+        familyId: family.id,
+        familyTitle: family.title,
+        category: family.category,
+        inputName: input.name,
+        inputSize: input.size,
+        outputExt: ext,
+        outputLabel: label,
+        outputFilename: applyNameMode(result.filename, nameMode, nameSuffix),
+        outputSize: result.blob.size,
+        nameMode,
+        nameSuffix: nameMode === "suffix" ? nameSuffix : undefined,
+        pageRange: isPdfSplit ? pageRange : undefined,
+      },
+      result.blob,
+    );
   };
 
   const cancelBatch = () => {
@@ -488,19 +485,22 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
     try {
       const { blob, filename } = await family.run(valid);
       setCombineState({ kind: "done", filename, size: blob.size, blob });
-      saveEntry({
-        familyId: family.id,
-        familyTitle: family.title,
-        category: family.category,
-        inputName: `${valid.length} files`,
-        inputSize: valid.reduce((s, f) => s + f.size, 0),
-        outputExt: family.outputExt,
-        outputLabel: family.outputLabel,
-        outputFilename: applyNameMode(filename, nameMode, nameSuffix),
-        outputSize: blob.size,
-        nameMode,
-        nameSuffix: nameMode === "suffix" ? nameSuffix : undefined,
-      }, blob);
+      saveEntry(
+        {
+          familyId: family.id,
+          familyTitle: family.title,
+          category: family.category,
+          inputName: `${valid.length} files`,
+          inputSize: valid.reduce((s, f) => s + f.size, 0),
+          outputExt: family.outputExt,
+          outputLabel: family.outputLabel,
+          outputFilename: applyNameMode(filename, nameMode, nameSuffix),
+          outputSize: blob.size,
+          nameMode,
+          nameSuffix: nameMode === "suffix" ? nameSuffix : undefined,
+        },
+        blob,
+      );
     } catch (e) {
       setCombineState({ kind: "error", message: e instanceof Error ? e.message : String(e) });
     }

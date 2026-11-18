@@ -81,10 +81,6 @@ export function CommandPalette() {
     return scored.slice(0, MAX_RESULTS).map((s) => s.tool);
   }, [query]);
 
-  useEffect(() => {
-    setActiveIdx(0);
-  }, [query]);
-
   if (!open) return null;
 
   const go = (tool: CatalogTool | undefined) => {
@@ -99,9 +95,7 @@ export function CommandPalette() {
       setActiveIdx((i) => (results.length === 0 ? 0 : (i + 1) % results.length));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setActiveIdx((i) =>
-        results.length === 0 ? 0 : (i - 1 + results.length) % results.length,
-      );
+      setActiveIdx((i) => (results.length === 0 ? 0 : (i - 1 + results.length) % results.length));
     } else if (e.key === "Home") {
       e.preventDefault();
       setActiveIdx(0);
@@ -133,11 +127,16 @@ export function CommandPalette() {
           <input
             ref={inputRef}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setActiveIdx(0);
+            }}
             placeholder={t("palette.placeholder")}
             aria-label={t("ui.search")}
             aria-controls="palette-results"
-            aria-activedescendant={results[activeIdx] ? `palette-${results[activeIdx].id}` : undefined}
+            aria-activedescendant={
+              results[activeIdx] ? `palette-${results[activeIdx].id}` : undefined
+            }
             className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
           <kbd className="hidden rounded border border-foreground/15 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground sm:block">

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ArrowLeft, ArrowUpRight, Calculator as CalcIcon, Play } from "lucide-react";
 import { relatedTools, toolById } from "@/lib/catalog";
 import { ConverterDialog } from "@/components/ConverterDialog";
@@ -47,6 +47,11 @@ export const Route = createFileRoute("/tools/$id")({
 
 function ToolPage() {
   const { id } = Route.useParams();
+  // Re-mount the inner component on id change so open state resets to true.
+  return <ToolContent key={id} id={id} />;
+}
+
+function ToolContent({ id }: { id: string }) {
   const t = useT();
   const categoryLabel = useCategoryLabel();
   const tool = useMemo(() => toolById(id), [id]);
@@ -55,16 +60,10 @@ function ToolPage() {
   // the landing page (formats, related tools) with a button to reopen it.
   const [open, setOpen] = useState(true);
 
-  useEffect(() => {
-    setOpen(true);
-  }, [id]);
-
   if (!tool) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-center">
-        <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-          404
-        </p>
+        <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">404</p>
         <h1 className="text-2xl font-semibold tracking-tight">{t("tool.notfound")}</h1>
         <p className="max-w-md text-sm text-muted-foreground">{t("tool.notfound.body")}</p>
         <Link

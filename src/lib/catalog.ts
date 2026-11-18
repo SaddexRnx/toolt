@@ -29,9 +29,7 @@ function fromFamily(f: Family): CatalogTool {
     category: f.category,
     inputs,
     outputs,
-    keywords: [f.title, f.description, f.category, ...inputs, ...outputs]
-      .join(" ")
-      .toLowerCase(),
+    keywords: [f.title, f.description, f.category, ...inputs, ...outputs].join(" ").toLowerCase(),
     family: f,
   };
 }

@@ -41,9 +41,9 @@ Drop a PDF, a 4K video, a spreadsheet, a token or a folder of images. Every byte
 
 <br />
 
-| Tools | File converters | Interactive tools | Languages | Uploads | Accounts | Trackers |
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **175** | **135** | **40** | **21** | **0** | **0** | **0** |
+|  Tools  | File converters | Interactive tools | Languages | Uploads | Accounts | Trackers |
+| :-----: | :-------------: | :---------------: | :-------: | :-----: | :------: | :------: |
+| **175** |     **135**     |      **40**       |  **21**   |  **0**  |  **0**   |  **0**   |
 
 ## What you get
 
@@ -76,17 +76,17 @@ And one page beats twelve tabs. A typical PDF task touches three sites: one to m
 
 I put the main alternatives side by side. This is about the processing model and the free-tier experience, not every paid plan. Limits and policies change, so check the provider if it matters to you.
 
-| | **To_olT** | **iLovePDF** | **Smallpdf** | **TinyWow** | **Convertio** | **Adobe Acrobat online** |
-| --- | :---: | :---: | :---: | :---: | :---: | :---: |
-| Where files are processed | **On your device** | Their servers | Their servers | Their servers | Their servers | Their servers |
-| Your file is uploaded | **Never** | Yes | Yes | Yes | Yes | Yes |
-| Account required | **No** | No, but limited | No, but limited | No | No, but limited | Yes for most tools |
-| Free-tier task limits | **None** | Daily / task caps | Daily / task caps | Varies | Daily caps | Varies |
-| Watermarks on free output | **None** | Some tools | Some tools | Some tools | Some tools | Some tools |
-| Works offline | **Yes** | No | No | No | No | No |
-| Ads or third-party trackers | **None** | Free tier | Free tier | Ads | Ads | Account wall |
-| Source code available | **MIT** | No | No | No | No | No |
-| Coverage | **175 tools in one app** | PDF-focused | PDF-focused | Broad | Format-focused | Document-focused |
+|                             |        **To_olT**        |   **iLovePDF**    |   **Smallpdf**    |  **TinyWow**  |  **Convertio**  | **Adobe Acrobat online** |
+| --------------------------- | :----------------------: | :---------------: | :---------------: | :-----------: | :-------------: | :----------------------: |
+| Where files are processed   |    **On your device**    |   Their servers   |   Their servers   | Their servers |  Their servers  |      Their servers       |
+| Your file is uploaded       |        **Never**         |        Yes        |        Yes        |      Yes      |       Yes       |           Yes            |
+| Account required            |          **No**          |  No, but limited  |  No, but limited  |      No       | No, but limited |    Yes for most tools    |
+| Free-tier task limits       |         **None**         | Daily / task caps | Daily / task caps |    Varies     |   Daily caps    |          Varies          |
+| Watermarks on free output   |         **None**         |    Some tools     |    Some tools     |  Some tools   |   Some tools    |        Some tools        |
+| Works offline               |         **Yes**          |        No         |        No         |      No       |       No        |            No            |
+| Ads or third-party trackers |         **None**         |     Free tier     |     Free tier     |      Ads      |       Ads       |       Account wall       |
+| Source code available       |         **MIT**          |        No         |        No         |      No       |       No        |            No            |
+| Coverage                    | **175 tools in one app** |    PDF-focused    |    PDF-focused    |     Broad     | Format-focused  |     Document-focused     |
 
 <sub>This compares the processing model and typical free-tier experience of each service, not every paid plan. Limits and policies change, so check each provider for current terms.</sub>
 
@@ -159,16 +159,16 @@ The app is a React front end with a thin SSR shell. The file work happens in the
 
 ### Stack
 
-| Layer | Built with |
-| --- | --- |
-| UI | React 19, TanStack Start & Router, Tailwind CSS v4, shadcn/ui primitives |
-| Build | Vite 8 (Rolldown), Nitro, Cloudflare Workers |
-| PDF | pdf-lib, pdf.js (legacy build for older browsers) |
-| Office & data | SheetJS, docx, mammoth, Papa Parse, js-yaml, smol-toml |
-| Media | ffmpeg.wasm |
-| Vision | tesseract.js, @imgly/background-removal |
-| Storage | localStorage (metadata), IndexedDB (blobs) |
-| Quality | TypeScript strict mode, ESLint, Prettier |
+| Layer         | Built with                                                               |
+| ------------- | ------------------------------------------------------------------------ |
+| UI            | React 19, TanStack Start & Router, Tailwind CSS v4, shadcn/ui primitives |
+| Build         | Vite 8 (Rolldown), Nitro, Cloudflare Workers                             |
+| PDF           | pdf-lib, pdf.js (legacy build for older browsers)                        |
+| Office & data | SheetJS, docx, mammoth, Papa Parse, js-yaml, smol-toml                   |
+| Media         | ffmpeg.wasm                                                              |
+| Vision        | tesseract.js, @imgly/background-removal                                  |
+| Storage       | localStorage (metadata), IndexedDB (blobs)                               |
+| Quality       | TypeScript strict mode, ESLint, Prettier                                 |
 
 No API keys, no paid services, no database and no server-side file processing.
 
@@ -176,13 +176,13 @@ No API keys, no paid services, no database and no server-side file processing.
 
 Heavy engines load on first use and are cached by the browser. They are not part of the initial payload.
 
-| Engine | Approx. size | Loaded when |
-| --- | ---: | --- |
-| `ffmpeg.wasm` core | ~30 MB | first video/audio conversion |
-| Tesseract + language data | ~15 MB | first OCR run |
-| Background removal model | ~40 MB | first background-removal run |
-| pdf.js worker | ~1 MB | first PDF preview or split |
-| pdf-lib, docx, SheetJS | small | per tool, on demand |
+| Engine                    | Approx. size | Loaded when                  |
+| ------------------------- | -----------: | ---------------------------- |
+| `ffmpeg.wasm` core        |       ~30 MB | first video/audio conversion |
+| Tesseract + language data |       ~15 MB | first OCR run                |
+| Background removal model  |       ~40 MB | first background-removal run |
+| pdf.js worker             |        ~1 MB | first PDF preview or split   |
+| pdf-lib, docx, SheetJS    |        small | per tool, on demand          |
 
 The first page loads the shell, the typed tool registry and Tailwind. Everything else waits for a real job.
 
@@ -209,14 +209,14 @@ bun run dev
 
 Open <http://localhost:8080>.
 
-| Script | What it does |
-| --- | --- |
-| `bun run dev` | Vite dev server with HMR |
-| `bun run build` | Production Cloudflare Worker in `.output/` |
-| `bun run preview` | Serve the production build with Wrangler |
-| `bun run typecheck` | TypeScript, no emit |
-| `bun run lint` | ESLint |
-| `bun run format` | Prettier |
+| Script              | What it does                               |
+| ------------------- | ------------------------------------------ |
+| `bun run dev`       | Vite dev server with HMR                   |
+| `bun run build`     | Production Cloudflare Worker in `.output/` |
+| `bun run preview`   | Serve the production build with Wrangler   |
+| `bun run typecheck` | TypeScript, no emit                        |
+| `bun run lint`      | ESLint                                     |
+| `bun run format`    | Prettier                                   |
 
 > `npm` and `pnpm` work too. The lockfile happens to be Bun's.
 

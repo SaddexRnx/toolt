@@ -146,9 +146,7 @@ export function SmartDropZone({ onPick, onHide }: Props) {
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-foreground/10 px-3 py-2.5 sm:flex sm:flex-wrap sm:justify-between sm:px-4 sm:py-3">
             <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs sm:text-sm">
               <FileIcon className="h-4 w-4 shrink-0 opacity-60" />
-              <span className="font-medium">
-                {t("smart.files", { n: files.length })}
-              </span>
+              <span className="font-medium">{t("smart.files", { n: files.length })}</span>
               <span className="hidden text-muted-foreground sm:inline">·</span>
               <div className="flex flex-wrap gap-1 font-mono text-[10px] uppercase tracking-widest">
                 {droppedExts.slice(0, 4).map((e) => (

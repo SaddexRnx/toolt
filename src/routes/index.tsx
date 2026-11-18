@@ -354,7 +354,9 @@ function Home() {
             filteredGroups.map((group) => (
               <div key={group.title} className="mb-16">
                 <div className="mb-6 flex items-baseline justify-between border-b border-foreground/10 pb-3">
-                  <h3 className="text-lg font-semibold tracking-tight">{categoryLabel(group.title)}</h3>
+                  <h3 className="text-lg font-semibold tracking-tight">
+                    {categoryLabel(group.title)}
+                  </h3>
                   <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
                     {t("catalog.tools.count", { n: group.items.length })}
                   </span>
@@ -430,13 +432,13 @@ function Home() {
 
                           <ArrowUpRight className="h-4 w-4 text-muted-foreground transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-[color:var(--brand)]" />
                         </div>
-                                                  <div>
-                            <div className="text-base font-medium">{f.title}</div>
-                            <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                              {f.description}
-                            </p>
-                          </div>
-                        </Link>
+                        <div>
+                          <div className="text-base font-medium">{f.title}</div>
+                          <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                            {f.description}
+                          </p>
+                        </div>
+                      </Link>
                     );
                   })}
                 </div>

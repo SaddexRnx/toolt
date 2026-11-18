@@ -212,7 +212,8 @@ const es: Dict = {
   "palette.count": "{n} herramientas",
   "tool.back": "Todas las herramientas",
   "tool.notfound": "Herramienta no encontrada",
-  "tool.notfound.body": "Esa herramienta no existe. Explora el catálogo completo para encontrar lo que necesitas.",
+  "tool.notfound.body":
+    "Esa herramienta no existe. Explora el catálogo completo para encontrar lo que necesitas.",
   "tool.inputs": "Acepta",
   "tool.outputs": "Genera",
   "tool.open": "Abrir herramienta",
@@ -301,7 +302,8 @@ const fr: Dict = {
   "palette.count": "{n} outils",
   "tool.back": "Tous les outils",
   "tool.notfound": "Outil introuvable",
-  "tool.notfound.body": "Cet outil n'existe pas. Parcourez le catalogue complet pour trouver ce qu'il vous faut.",
+  "tool.notfound.body":
+    "Cet outil n'existe pas. Parcourez le catalogue complet pour trouver ce qu'il vous faut.",
   "tool.inputs": "Accepte",
   "tool.outputs": "Produit",
   "tool.open": "Ouvrir l'outil",
@@ -391,7 +393,8 @@ const de: Dict = {
   "palette.count": "{n} Tools",
   "tool.back": "Alle Tools",
   "tool.notfound": "Tool nicht gefunden",
-  "tool.notfound.body": "Dieses Tool gibt es nicht. Durchsuche den vollständigen Katalog, um das Richtige zu finden.",
+  "tool.notfound.body":
+    "Dieses Tool gibt es nicht. Durchsuche den vollständigen Katalog, um das Richtige zu finden.",
   "tool.inputs": "Akzeptiert",
   "tool.outputs": "Erzeugt",
   "tool.open": "Tool öffnen",
@@ -481,7 +484,8 @@ const it: Dict = {
   "palette.count": "{n} strumenti",
   "tool.back": "Tutti gli strumenti",
   "tool.notfound": "Strumento non trovato",
-  "tool.notfound.body": "Questo strumento non esiste. Sfoglia il catalogo completo per trovare quello che ti serve.",
+  "tool.notfound.body":
+    "Questo strumento non esiste. Sfoglia il catalogo completo per trovare quello che ti serve.",
   "tool.inputs": "Accetta",
   "tool.outputs": "Produce",
   "tool.open": "Apri strumento",
@@ -571,7 +575,8 @@ const pt: Dict = {
   "palette.count": "{n} ferramentas",
   "tool.back": "Todas as ferramentas",
   "tool.notfound": "Ferramenta não encontrada",
-  "tool.notfound.body": "Essa ferramenta não existe. Explore o catálogo completo para encontrar o que precisa.",
+  "tool.notfound.body":
+    "Essa ferramenta não existe. Explore o catálogo completo para encontrar o que precisa.",
   "tool.inputs": "Aceita",
   "tool.outputs": "Gera",
   "tool.open": "Abrir ferramenta",
@@ -661,7 +666,8 @@ const nl: Dict = {
   "palette.count": "{n} tools",
   "tool.back": "Alle tools",
   "tool.notfound": "Tool niet gevonden",
-  "tool.notfound.body": "Deze tool bestaat niet. Blader door de volledige catalogus om te vinden wat je zoekt.",
+  "tool.notfound.body":
+    "Deze tool bestaat niet. Blader door de volledige catalogus om te vinden wat je zoekt.",
   "tool.inputs": "Accepteert",
   "tool.outputs": "Maakt",
   "tool.open": "Tool openen",
@@ -1027,7 +1033,8 @@ const ko: Dict = {
   "palette.count": "도구 {n}개",
   "tool.back": "모든 도구",
   "tool.notfound": "도구를 찾을 수 없음",
-  "tool.notfound.body": "해당 도구는 존재하지 않습니다. 전체 카탈로그에서 필요한 도구를 찾아보세요.",
+  "tool.notfound.body":
+    "해당 도구는 존재하지 않습니다. 전체 카탈로그에서 필요한 도구를 찾아보세요.",
   "tool.inputs": "입력",
   "tool.outputs": "출력",
   "tool.open": "도구 열기",
@@ -1225,7 +1232,8 @@ const tr: Dict = {
   "palette.count": "{n} araç",
   "tool.back": "Tüm araçlar",
   "tool.notfound": "Araç bulunamadı",
-  "tool.notfound.body": "Bu araç mevcut değil. İhtiyacınız olanı bulmak için tüm kataloğa göz atın.",
+  "tool.notfound.body":
+    "Bu araç mevcut değil. İhtiyacınız olanı bulmak için tüm kataloğa göz atın.",
   "tool.inputs": "Kabul eder",
   "tool.outputs": "Üretir",
   "tool.open": "Aracı aç",
@@ -1318,7 +1326,8 @@ const pl: Dict = {
   "palette.count.many": "{n} narzędzi",
   "tool.back": "Wszystkie narzędzia",
   "tool.notfound": "Nie znaleziono narzędzia",
-  "tool.notfound.body": "To narzędzie nie istnieje. Przejrzyj pełny katalog, aby znaleźć potrzebne.",
+  "tool.notfound.body":
+    "To narzędzie nie istnieje. Przejrzyj pełny katalog, aby znaleźć potrzebne.",
   "tool.inputs": "Przyjmuje",
   "tool.outputs": "Tworzy",
   "tool.open": "Otwórz narzędzie",
@@ -1449,12 +1458,14 @@ const vi: Dict = {
   "hero.desc":
     "{tools} công cụ · {outputs} định dạng đầu ra. To_olT chuyển đổi, nén, gộp, tách, trích xuất, định dạng, băm, quét và tạo - PDF, hình ảnh, video, âm thanh, tài liệu, dữ liệu, mã và cấu hình. Tất cả chạy cục bộ trong trình duyệt: không tài khoản, không tải lên, không giới hạn.",
   "features.private.title": "Riêng tư ngay từ thiết kế",
-  "features.private.body": "Tệp không bao giờ chạm tới máy chủ. Mọi byte được xử lý trên thiết bị của bạn.",
+  "features.private.body":
+    "Tệp không bao giờ chạm tới máy chủ. Mọi byte được xử lý trên thiết bị của bạn.",
   "features.instant.title": "Tức thì và hàng loạt",
   "features.instant.body":
     "Thả một hoặc một trăm tệp. Xem trước, thử lại, đổi tên, nén ZIP hoặc tải từng tệp.",
   "features.oss.title": "Nền tảng mã nguồn mở",
-  "features.oss.body": "pdf-lib, pdf.js, SheetJS, ffmpeg.wasm, tesseract.js và nhiều hơn nữa. Không cần API key.",
+  "features.oss.body":
+    "pdf-lib, pdf.js, SheetJS, ffmpeg.wasm, tesseract.js và nhiều hơn nữa. Không cần API key.",
   "smart.subtitle": "thả → nhận diện → chọn",
   "smart.files": "{n} tệp",
   "smart.files.plural": "{n} tệp",
@@ -1506,7 +1517,8 @@ const vi: Dict = {
   "palette.count": "{n} công cụ",
   "tool.back": "Tất cả công cụ",
   "tool.notfound": "Không tìm thấy công cụ",
-  "tool.notfound.body": "Công cụ này không tồn tại. Hãy duyệt toàn bộ danh mục để tìm công cụ bạn cần.",
+  "tool.notfound.body":
+    "Công cụ này không tồn tại. Hãy duyệt toàn bộ danh mục để tìm công cụ bạn cần.",
   "tool.inputs": "Nhận",
   "tool.outputs": "Tạo ra",
   "tool.open": "Mở công cụ",
@@ -1536,12 +1548,14 @@ const id: Dict = {
   "hero.desc":
     "{tools} alat · {outputs} format keluaran. To_olT mengonversi, memadatkan, menggabungkan, memisahkan, mengekstrak, memformat, membuat hash, memindai, dan membuat - PDF, gambar, video, audio, dokumen, data, kode, dan konfigurasi. Semua berjalan lokal di browser: tanpa akun, tanpa unggahan, tanpa batas.",
   "features.private.title": "Privat sejak dirancang",
-  "features.private.body": "Berkas tidak pernah menyentuh server. Setiap byte diproses di perangkat Anda.",
+  "features.private.body":
+    "Berkas tidak pernah menyentuh server. Setiap byte diproses di perangkat Anda.",
   "features.instant.title": "Instan & massal",
   "features.instant.body":
     "Jatuhkan satu atau seratus berkas. Pratinjau, ulangi, ganti nama, ZIP, atau unduh satu per satu.",
   "features.oss.title": "Teknologi open source",
-  "features.oss.body": "pdf-lib, pdf.js, SheetJS, ffmpeg.wasm, tesseract.js dan lainnya. Tanpa kunci API.",
+  "features.oss.body":
+    "pdf-lib, pdf.js, SheetJS, ffmpeg.wasm, tesseract.js dan lainnya. Tanpa kunci API.",
   "smart.subtitle": "jatuhkan → deteksi → pilih",
   "smart.files": "{n} berkas",
   "smart.files.plural": "{n} berkas",
@@ -1593,7 +1607,8 @@ const id: Dict = {
   "palette.count": "{n} alat",
   "tool.back": "Semua alat",
   "tool.notfound": "Alat tidak ditemukan",
-  "tool.notfound.body": "Alat ini tidak ada. Telusuri katalog lengkap untuk menemukan yang Anda butuhkan.",
+  "tool.notfound.body":
+    "Alat ini tidak ada. Telusuri katalog lengkap untuk menemukan yang Anda butuhkan.",
   "tool.inputs": "Menerima",
   "tool.outputs": "Menghasilkan",
   "tool.open": "Buka alat",
@@ -1623,12 +1638,14 @@ const uk: Dict = {
   "hero.desc":
     "{tools} інструментів · {outputs} форматів виводу. To_olT конвертує, стискає, об'єднує, розділяє, витягує, форматує, хешує, сканує й генерує - PDF, зображення, відео, аудіо, документи, дані, код і конфігурації. Усе працює локально у браузері: без акаунтів, завантажень і лімітів.",
   "features.private.title": "Приватність за задумом",
-  "features.private.body": "Файли не потрапляють на сервер. Кожен байт обробляється на вашому пристрої.",
+  "features.private.body":
+    "Файли не потрапляють на сервер. Кожен байт обробляється на вашому пристрої.",
   "features.instant.title": "Миттєво й пакетно",
   "features.instant.body":
     "Один файл або сто. Перегляд, повтор, перейменування, ZIP або окреме завантаження.",
   "features.oss.title": "Технології з відкритим кодом",
-  "features.oss.body": "pdf-lib, pdf.js, SheetJS, ffmpeg.wasm, tesseract.js та інші. Без API-ключів.",
+  "features.oss.body":
+    "pdf-lib, pdf.js, SheetJS, ffmpeg.wasm, tesseract.js та інші. Без API-ключів.",
   "smart.subtitle": "перетягнути → розпізнати → вибрати",
   "smart.files": "{n} файл",
   "smart.files.plural": "{n} файлів",
@@ -1683,7 +1700,8 @@ const uk: Dict = {
   "palette.count.many": "{n} інструментів",
   "tool.back": "Усі інструменти",
   "tool.notfound": "Інструмент не знайдено",
-  "tool.notfound.body": "Такого інструмента немає. Перегляньте повний каталог, щоб знайти потрібний.",
+  "tool.notfound.body":
+    "Такого інструмента немає. Перегляньте повний каталог, щоб знайти потрібний.",
   "tool.inputs": "Приймає",
   "tool.outputs": "Створює",
   "tool.open": "Відкрити інструмент",
@@ -1727,7 +1745,8 @@ const sv: Dict = {
   "features.instant.body":
     "Släpp en fil eller hundra. Förhandsgranska, försök igen, byt namn, ZIP eller ladda ner en i taget.",
   "features.oss.title": "Teknik med öppen källkod",
-  "features.oss.body": "pdf-lib, pdf.js, SheetJS, ffmpeg.wasm, tesseract.js med flera. Inga API-nycklar.",
+  "features.oss.body":
+    "pdf-lib, pdf.js, SheetJS, ffmpeg.wasm, tesseract.js med flera. Inga API-nycklar.",
   "smart.subtitle": "släpp → identifiera → välj",
   "smart.files": "{n} fil",
   "smart.files.plural": "{n} filer",
@@ -1779,7 +1798,8 @@ const sv: Dict = {
   "palette.count": "{n} verktyg",
   "tool.back": "Alla verktyg",
   "tool.notfound": "Verktyget hittades inte",
-  "tool.notfound.body": "Det verktyget finns inte. Bläddra i hela katalogen för att hitta det du behöver.",
+  "tool.notfound.body":
+    "Det verktyget finns inte. Bläddra i hela katalogen för att hitta det du behöver.",
   "tool.inputs": "Tar emot",
   "tool.outputs": "Skapar",
   "tool.open": "Öppna verktyget",
@@ -1809,12 +1829,14 @@ const cs: Dict = {
   "hero.desc":
     "{tools} nástrojů · {outputs} výstupních formátů. To_olT převádí, komprimuje, slučuje, rozděluje, extrahuje, formátuje, hashuje, skenuje a generuje - PDF, obrázky, video, audio, dokumenty, data, kód a konfigurace. Vše běží lokálně v prohlížeči: bez účtů, nahrávání a limitů.",
   "features.private.title": "Soukromí už v návrhu",
-  "features.private.body": "Soubory se nikdy nedostanou na server. Každý bajt se zpracuje na vašem zařízení.",
+  "features.private.body":
+    "Soubory se nikdy nedostanou na server. Každý bajt se zpracuje na vašem zařízení.",
   "features.instant.title": "Okamžité a dávkové",
   "features.instant.body":
     "Přetáhněte jeden nebo sto souborů. Náhled, opakování, přejmenování, ZIP nebo jednotlivé stahování.",
   "features.oss.title": "Open-source technologie",
-  "features.oss.body": "pdf-lib, pdf.js, SheetJS, ffmpeg.wasm, tesseract.js a další. Bez API klíčů.",
+  "features.oss.body":
+    "pdf-lib, pdf.js, SheetJS, ffmpeg.wasm, tesseract.js a další. Bez API klíčů.",
   "smart.subtitle": "přetáhnout → rozpoznat → vybrat",
   "smart.files": "{n} soubor",
   "smart.files.plural": "{n} souborů",
@@ -2167,4 +2189,3 @@ export function useCategoryLabel() {
     [t],
   );
 }
-
