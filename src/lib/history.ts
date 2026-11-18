@@ -1,4 +1,4 @@
-// Local (localStorage) conversion history — metadata + IndexedDB blob store
+// Local (localStorage) conversion history - metadata + IndexedDB blob store
 // for one-click re-download from previous entries.
 
 export type HistoryEntry = {
@@ -38,15 +38,35 @@ function openDb(): Promise<IDBDatabase | null> {
   });
 }
 
-async function withStore<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest): Promise<T | null> {
+async function withStore<T>(
+  mode: IDBTransactionMode,
+  fn: (s: IDBObjectStore) => IDBRequest,
+): Promise<T | null> {
   const db = await openDb();
   if (!db) return null;
   return new Promise((resolve) => {
-    const tx = db.transaction(STORE, mode);
-    const req = fn(tx.objectStore(STORE));
-    req.onsuccess = () => resolve(req.result as T);
-    req.onerror = () => resolve(null);
-    tx.oncomplete = () => db.close();
+    let settled = false;
+    const finish = (value: T | null) => {
+      if (settled) return;
+      settled = true;
+      try {
+        db.close();
+      } catch {
+        /* ignore */
+      }
+      resolve(value);
+    };
+    try {
+      const tx = db.transaction(STORE, mode);
+      // Aborted transactions (e.g. quota exceeded on a large put) must still
+      // settle the promise and release the connection.
+      tx.onabort = () => finish(null);
+      const req = fn(tx.objectStore(STORE));
+      req.onsuccess = () => finish(req.result as T);
+      req.onerror = () => finish(null);
+    } catch {
+      finish(null);
+    }
   });
 }
 
@@ -79,10 +99,15 @@ export function loadHistory(): HistoryEntry[] {
   }
 }
 
-export function saveEntry(entry: Omit<HistoryEntry, "id" | "timestamp">): string {
+export function saveEntry(
+  entry: Omit<HistoryEntry, "id" | "timestamp" | "hasBlob">,
+  blob?: Blob,
+): string {
   const list = loadHistory();
   const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const next: HistoryEntry = { ...entry, id, timestamp: Date.now() };
+  // hasBlob is the result of the actual write, never an assumption: a quota
+  // failure must not leave a download button that silently does nothing.
+  const next: HistoryEntry = { ...entry, id, timestamp: Date.now(), hasBlob: false };
   list.unshift(next);
   const trimmed = list.slice(0, MAX);
   // Drop blobs for entries that got trimmed off
@@ -93,6 +118,18 @@ export function saveEntry(entry: Omit<HistoryEntry, "id" | "timestamp">): string
     window.dispatchEvent(new CustomEvent("monochrome:history"));
   } catch {
     // ignore quota errors
+  }
+  if (blob) {
+    void saveBlob(id, blob).then((ok) => {
+      if (!ok) return;
+      const patched = loadHistory().map((e) => (e.id === id ? { ...e, hasBlob: true } : e));
+      try {
+        localStorage.setItem(KEY, JSON.stringify(patched));
+        window.dispatchEvent(new CustomEvent("monochrome:history"));
+      } catch {
+        // The entry still lists the filename/settings; only re-download is missing.
+      }
+    });
   }
   return id;
 }

@@ -9,8 +9,17 @@ export function parseColor(input: string): { r: number; g: number; b: number; a:
   let m = s.match(/^#?([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
   if (m) {
     let h = m[1];
-    if (h.length === 3) h = h.split("").map((c) => c + c).join("") + "ff";
-    else if (h.length === 4) h = h.split("").map((c) => c + c).join("");
+    if (h.length === 3)
+      h =
+        h
+          .split("")
+          .map((c) => c + c)
+          .join("") + "ff";
+    else if (h.length === 4)
+      h = h
+        .split("")
+        .map((c) => c + c)
+        .join("");
     else if (h.length === 6) h = h + "ff";
     const r = parseInt(h.slice(0, 2), 16);
     const g = parseInt(h.slice(2, 4), 16);
@@ -18,28 +27,38 @@ export function parseColor(input: string): { r: number; g: number; b: number; a:
     const a = parseInt(h.slice(6, 8), 16) / 255;
     return { r, g, b, a };
   }
-  // rgb(a)
-  m = s.match(/^rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s/]+([\d.]+%?))?\s*\)$/);
+  // rgb(a) - legacy comma syntax and modern space syntax with / alpha and % channels
+  m = s.match(
+    /^rgba?\(\s*(-?[\d.]+%?)[,\s]+(-?[\d.]+%?)[,\s]+(-?[\d.]+%?)(?:[,\s/]+(-?[\d.]+%?))?\s*\)$/,
+  );
   if (m) {
-    const r = clamp255(+m[1]);
-    const g = clamp255(+m[2]);
-    const b = clamp255(+m[3]);
+    const chan = (t: string) =>
+      t.endsWith("%") ? clamp255((parseFloat(t) / 100) * 255) : clamp255(parseFloat(t));
+    const r = chan(m[1]);
+    const g = chan(m[2]);
+    const b = chan(m[3]);
     let a = 1;
     if (m[4] != null) a = m[4].endsWith("%") ? +m[4].slice(0, -1) / 100 : +m[4];
-    return { r, g, b, a };
+    return { r, g, b, a: clamp01(a) };
   }
-  // hsl(a)
-  m = s.match(/^hsla?\(\s*([\d.]+)(?:deg)?[,\s]+([\d.]+)%[,\s]+([\d.]+)%(?:[,\s/]+([\d.]+%?))?\s*\)$/);
+  // hsl(a) - degrees may be negative; S/L are percentages
+  m = s.match(
+    /^hsla?\(\s*(-?[\d.]+)(?:deg)?(?:%?)[,\s]+(-?[\d.]+)%[,\s]+(-?[\d.]+)%(?:[,\s/]+(-?[\d.]+%?))?\s*\)$/,
+  );
   if (m) {
-    const rgb = hslToRgb(+m[1], +m[2], +m[3]);
+    // S and L arrive as percentages (0-100); clampPct keeps them there.
+    // clamp01 would squash every value >= 1 down to 100%, so hsl(210, 50%, 40%)
+    // used to come out as a fully saturated 100%/100% colour.
+    const rgb = hslToRgb(+m[1], clampPct(+m[2]), clampPct(+m[3]));
     let a = 1;
     if (m[4] != null) a = m[4].endsWith("%") ? +m[4].slice(0, -1) / 100 : +m[4];
-    return { ...rgb, a };
+    return { ...rgb, a: clamp01(a) };
   }
   return null;
 }
 const clamp255 = (n: number) => Math.max(0, Math.min(255, Math.round(n)));
 const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
+const clampPct = (n: number) => Math.max(0, Math.min(100, n));
 
 export function toHex({ r, g, b, a = 1 }: { r: number; g: number; b: number; a?: number }) {
   const h = (n: number) => n.toString(16).padStart(2, "0");
@@ -47,17 +66,27 @@ export function toHex({ r, g, b, a = 1 }: { r: number; g: number; b: number; a?:
   return a < 1 ? base + h(Math.round(a * 255)) : base;
 }
 export function rgbToHsl(r: number, g: number, b: number) {
-  const R = r / 255, G = g / 255, B = b / 255;
-  const max = Math.max(R, G, B), min = Math.min(R, G, B);
+  const R = r / 255,
+    G = g / 255,
+    B = b / 255;
+  const max = Math.max(R, G, B),
+    min = Math.min(R, G, B);
   const l = (max + min) / 2;
-  let h = 0, s = 0;
+  let h = 0,
+    s = 0;
   if (max !== min) {
     const d = max - min;
     s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
     switch (max) {
-      case R: h = ((G - B) / d + (G < B ? 6 : 0)); break;
-      case G: h = (B - R) / d + 2; break;
-      case B: h = (R - G) / d + 4; break;
+      case R:
+        h = (G - B) / d + (G < B ? 6 : 0);
+        break;
+      case G:
+        h = (B - R) / d + 2;
+        break;
+      case B:
+        h = (R - G) / d + 4;
+        break;
     }
     h *= 60;
   }
@@ -65,11 +94,12 @@ export function rgbToHsl(r: number, g: number, b: number) {
 }
 export function hslToRgb(h: number, s: number, l: number) {
   h = ((h % 360) + 360) % 360;
-  const S = s / 100, L = l / 100;
+  const S = s / 100,
+    L = l / 100;
   const c = (1 - Math.abs(2 * L - 1)) * S;
   const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
   const m = L - c / 2;
-  let r = 0, g = 0, b = 0;
+  let r: number, g: number, b: number;
   if (h < 60) [r, g, b] = [c, x, 0];
   else if (h < 120) [r, g, b] = [x, c, 0];
   else if (h < 180) [r, g, b] = [0, c, x];
@@ -79,24 +109,35 @@ export function hslToRgb(h: number, s: number, l: number) {
   return { r: clamp255((r + m) * 255), g: clamp255((g + m) * 255), b: clamp255((b + m) * 255) };
 }
 export function rgbToHsv(r: number, g: number, b: number) {
-  const R = r / 255, G = g / 255, B = b / 255;
-  const max = Math.max(R, G, B), min = Math.min(R, G, B);
+  const R = r / 255,
+    G = g / 255,
+    B = b / 255;
+  const max = Math.max(R, G, B),
+    min = Math.min(R, G, B);
   const d = max - min;
   const v = max;
   const s = max === 0 ? 0 : d / max;
   let h = 0;
   if (d !== 0) {
     switch (max) {
-      case R: h = ((G - B) / d + (G < B ? 6 : 0)); break;
-      case G: h = (B - R) / d + 2; break;
-      case B: h = (R - G) / d + 4; break;
+      case R:
+        h = (G - B) / d + (G < B ? 6 : 0);
+        break;
+      case G:
+        h = (B - R) / d + 2;
+        break;
+      case B:
+        h = (R - G) / d + 4;
+        break;
     }
     h *= 60;
   }
   return { h, s: s * 100, v: v * 100 };
 }
 export function rgbToCmyk(r: number, g: number, b: number) {
-  const R = r / 255, G = g / 255, B = b / 255;
+  const R = r / 255,
+    G = g / 255,
+    B = b / 255;
   const k = 1 - Math.max(R, G, B);
   if (k === 1) return { c: 0, m: 0, y: 0, k: 100 };
   const c = (1 - R - k) / (1 - k);
@@ -112,8 +153,12 @@ function relLum(r: number, g: number, b: number) {
   };
   return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
 }
-export function contrastRatio(a: { r: number; g: number; b: number }, b: { r: number; g: number; b: number }) {
-  const L1 = relLum(a.r, a.g, a.b), L2 = relLum(b.r, b.g, b.b);
+export function contrastRatio(
+  a: { r: number; g: number; b: number },
+  b: { r: number; g: number; b: number },
+) {
+  const L1 = relLum(a.r, a.g, a.b),
+    L2 = relLum(b.r, b.g, b.b);
   const [hi, lo] = L1 > L2 ? [L1, L2] : [L2, L1];
   return (hi + 0.05) / (lo + 0.05);
 }
@@ -131,7 +176,8 @@ function withLight(hex: string, l: number) {
   return toHex(rgb);
 }
 function mixColors(a: string, b: string, ratio: number) {
-  const A = parseColor(a)!, B = parseColor(b)!;
+  const A = parseColor(a)!,
+    B = parseColor(b)!;
   const t = clamp01(ratio);
   return toHex({
     r: clamp255(A.r * (1 - t) + B.r * t),
@@ -149,7 +195,13 @@ export const colorCalculators: Calculator[] = [
     title: "Color converter (HEX ↔ RGB ↔ HSL ↔ HSV ↔ CMYK)",
     description: "Enter any CSS color and get every format instantly.",
     fields: [
-      { id: "color", label: "Color", type: "text", default: "#3b82f6", placeholder: "#hex, rgb(), or hsl()" },
+      {
+        id: "color",
+        label: "Color",
+        type: "text",
+        default: "#3b82f6",
+        placeholder: "#hex, rgb(), or hsl()",
+      },
     ],
     compute: (v) => {
       const p = parseColor(v.color);
@@ -162,9 +214,18 @@ export const colorCalculators: Calculator[] = [
         { label: "Preview", value: hex.toUpperCase(), swatch: hex },
         { label: "HEX", value: hex.toUpperCase() },
         { label: "RGB", value: `rgb(${p.r}, ${p.g}, ${p.b})` },
-        { label: "HSL", value: `hsl(${hsl.h.toFixed(0)}, ${hsl.s.toFixed(0)}%, ${hsl.l.toFixed(0)}%)` },
-        { label: "HSV", value: `hsv(${hsv.h.toFixed(0)}, ${hsv.s.toFixed(0)}%, ${hsv.v.toFixed(0)}%)` },
-        { label: "CMYK", value: `cmyk(${cmyk.c.toFixed(0)}%, ${cmyk.m.toFixed(0)}%, ${cmyk.y.toFixed(0)}%, ${cmyk.k.toFixed(0)}%)` },
+        {
+          label: "HSL",
+          value: `hsl(${hsl.h.toFixed(0)}, ${hsl.s.toFixed(0)}%, ${hsl.l.toFixed(0)}%)`,
+        },
+        {
+          label: "HSV",
+          value: `hsv(${hsv.h.toFixed(0)}, ${hsv.s.toFixed(0)}%, ${hsv.v.toFixed(0)}%)`,
+        },
+        {
+          label: "CMYK",
+          value: `cmyk(${cmyk.c.toFixed(0)}%, ${cmyk.m.toFixed(0)}%, ${cmyk.y.toFixed(0)}%, ${cmyk.k.toFixed(0)}%)`,
+        },
         { label: "Alpha", value: p.a.toFixed(2) },
       ];
     },
@@ -173,11 +234,15 @@ export const colorCalculators: Calculator[] = [
     id: "color-palette",
     category: "Color",
     title: "Palette generator",
-    description: "Harmony palettes from a base color: complementary, triadic, tetradic, analogous, split, monochromatic.",
+    description:
+      "Harmony palettes from a base color: complementary, triadic, tetradic, analogous, split, monochromatic.",
     fields: [
       { id: "color", label: "Base color", type: "text", default: "#3b82f6" },
       {
-        id: "scheme", label: "Scheme", type: "select", default: "triadic",
+        id: "scheme",
+        label: "Scheme",
+        type: "select",
+        default: "triadic",
         options: [
           { value: "complementary", label: "Complementary (2)" },
           { value: "split", label: "Split complementary (3)" },
@@ -194,11 +259,27 @@ export const colorCalculators: Calculator[] = [
       const base = toHex(p);
       let out: string[] = [];
       switch (v.scheme) {
-        case "complementary": out = [base, shiftHue(base, 180)]; break;
-        case "split": out = [base, shiftHue(base, 150), shiftHue(base, 210)]; break;
-        case "triadic": out = [base, shiftHue(base, 120), shiftHue(base, 240)]; break;
-        case "tetradic": out = [base, shiftHue(base, 90), shiftHue(base, 180), shiftHue(base, 270)]; break;
-        case "analogous": out = [shiftHue(base, -40), shiftHue(base, -20), base, shiftHue(base, 20), shiftHue(base, 40)]; break;
+        case "complementary":
+          out = [base, shiftHue(base, 180)];
+          break;
+        case "split":
+          out = [base, shiftHue(base, 150), shiftHue(base, 210)];
+          break;
+        case "triadic":
+          out = [base, shiftHue(base, 120), shiftHue(base, 240)];
+          break;
+        case "tetradic":
+          out = [base, shiftHue(base, 90), shiftHue(base, 180), shiftHue(base, 270)];
+          break;
+        case "analogous":
+          out = [
+            shiftHue(base, -40),
+            shiftHue(base, -20),
+            base,
+            shiftHue(base, 20),
+            shiftHue(base, 40),
+          ];
+          break;
         case "monochromatic": {
           const hsl = rgbToHsl(p.r, p.g, p.b);
           out = [20, 35, hsl.l, 65, 85].map((l) => toHex(hslToRgb(hsl.h, hsl.s, l)));
@@ -220,8 +301,12 @@ export const colorCalculators: Calculator[] = [
     compute: (v) => {
       const p = parseColor(v.color);
       if (!p) return err("Invalid color.");
-      const shades = Array.from({ length: 10 }, (_, i) => mixColors(toHex(p), "#000000", (i + 1) / 11));
-      const tints = Array.from({ length: 10 }, (_, i) => mixColors(toHex(p), "#ffffff", (i + 1) / 11));
+      const shades = Array.from({ length: 10 }, (_, i) =>
+        mixColors(toHex(p), "#000000", (i + 1) / 11),
+      );
+      const tints = Array.from({ length: 10 }, (_, i) =>
+        mixColors(toHex(p), "#ffffff", (i + 1) / 11),
+      );
       return [
         { label: "Base", value: toHex(p).toUpperCase(), swatch: toHex(p) },
         { label: "Shades (→ black)", value: `${shades.length}`, swatches: shades },
@@ -237,7 +322,16 @@ export const colorCalculators: Calculator[] = [
     fields: [
       { id: "a", label: "Color A", type: "text", default: "#3b82f6" },
       { id: "b", label: "Color B", type: "text", default: "#f59e0b" },
-      { id: "ratio", label: "B amount", type: "number", default: 50, min: 0, max: 100, step: 1, unit: "%" },
+      {
+        id: "ratio",
+        label: "B amount",
+        type: "number",
+        default: 50,
+        min: 0,
+        max: 100,
+        step: 1,
+        unit: "%",
+      },
     ],
     compute: (v) => {
       if (!parseColor(v.a) || !parseColor(v.b)) return err("Invalid color.");
@@ -260,7 +354,8 @@ export const colorCalculators: Calculator[] = [
       { id: "bg", label: "Background", type: "text", default: "#ffffff" },
     ],
     compute: (v) => {
-      const fg = parseColor(v.fg), bg = parseColor(v.bg);
+      const fg = parseColor(v.fg),
+        bg = parseColor(v.bg);
       if (!fg || !bg) return err("Invalid color.");
       const ratio = contrastRatio(fg, bg);
       const pass = (min: number) => (ratio >= min ? "PASS" : "FAIL");
@@ -268,10 +363,10 @@ export const colorCalculators: Calculator[] = [
         { label: "Foreground", value: toHex(fg).toUpperCase(), swatch: toHex(fg) },
         { label: "Background", value: toHex(bg).toUpperCase(), swatch: toHex(bg) },
         { label: "Contrast ratio", value: `${ratio.toFixed(2)} : 1` },
-        { label: "AA — normal text (≥ 4.5)", value: pass(4.5) },
-        { label: "AA — large text (≥ 3)", value: pass(3) },
-        { label: "AAA — normal text (≥ 7)", value: pass(7) },
-        { label: "AAA — large text (≥ 4.5)", value: pass(4.5) },
+        { label: "AA - normal text (≥ 4.5)", value: pass(4.5) },
+        { label: "AA - large text (≥ 3)", value: pass(3) },
+        { label: "AAA - normal text (≥ 7)", value: pass(7) },
+        { label: "AAA - large text (≥ 4.5)", value: pass(4.5) },
       ];
     },
   },
@@ -281,16 +376,34 @@ export const colorCalculators: Calculator[] = [
     title: "CSS gradient builder",
     description: "Two-stop linear or radial gradient with copy-ready CSS.",
     fields: [
-      { id: "type", label: "Type", type: "select", default: "linear", options: [ { value: "linear", label: "Linear" }, { value: "radial", label: "Radial" } ] },
-      { id: "angle", label: "Angle (linear only)", type: "number", default: 90, min: 0, max: 360, unit: "deg" },
+      {
+        id: "type",
+        label: "Type",
+        type: "select",
+        default: "linear",
+        options: [
+          { value: "linear", label: "Linear" },
+          { value: "radial", label: "Radial" },
+        ],
+      },
+      {
+        id: "angle",
+        label: "Angle (linear only)",
+        type: "number",
+        default: 90,
+        min: 0,
+        max: 360,
+        unit: "deg",
+      },
       { id: "a", label: "Start color", type: "text", default: "#3b82f6" },
       { id: "b", label: "End color", type: "text", default: "#a855f7" },
     ],
     compute: (v) => {
       if (!parseColor(v.a) || !parseColor(v.b)) return err("Invalid color.");
-      const css = v.type === "radial"
-        ? `radial-gradient(circle, ${v.a}, ${v.b})`
-        : `linear-gradient(${num(v.angle)}deg, ${v.a}, ${v.b})`;
+      const css =
+        v.type === "radial"
+          ? `radial-gradient(circle, ${v.a}, ${v.b})`
+          : `linear-gradient(${num(v.angle)}deg, ${v.a}, ${v.b})`;
       const preview = [v.a, mixColors(v.a, v.b, 0.5), v.b];
       return [
         { label: "Preview", value: v.type, swatches: preview },
@@ -305,7 +418,15 @@ export const colorCalculators: Calculator[] = [
     title: "Random color",
     description: "Generate a random color with tweakable saturation and lightness.",
     fields: [
-      { id: "seed", label: "Reroll (change to regenerate)", type: "number", default: 1, min: 1, max: 999999, step: 1 },
+      {
+        id: "seed",
+        label: "Reroll (change to regenerate)",
+        type: "number",
+        default: 1,
+        min: 1,
+        max: 999999,
+        step: 1,
+      },
       { id: "sat", label: "Saturation", type: "number", default: 70, min: 0, max: 100, unit: "%" },
       { id: "light", label: "Lightness", type: "number", default: 55, min: 0, max: 100, unit: "%" },
     ],
@@ -325,4 +446,7 @@ export const colorCalculators: Calculator[] = [
   },
 ];
 
-function num(v: string, fallback = 0) { const n = Number(v); return Number.isFinite(n) ? n : fallback; }
+function num(v: string, fallback = 0) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}

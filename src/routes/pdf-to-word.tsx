@@ -2,12 +2,15 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { ConverterDialog } from "@/components/ConverterDialog";
 import { families } from "@/lib/converters";
+import { calculators } from "@/lib/calculators";
 import { Button } from "@/components/ui/button";
+import { siteUrl } from "@/lib/site";
 
-const TITLE = "PDF to Word Converter — Free, In-Browser .docx | To_olT";
+const TITLE = "PDF to Word Converter - Free, In-Browser .docx | To_olT";
 const DESCRIPTION =
-  "Convert PDF to Word (.docx) free in your browser. No uploads, no accounts, no watermarks — your files never leave your device. Also exports Rich Text (.rtf).";
-const URL = "https://toolt.lovable.app/pdf-to-word";
+  "Convert PDF to Word (.docx) free in your browser. No uploads, no accounts, no watermarks - your files never leave your device. Also exports Rich Text (.rtf).";
+const URL = siteUrl("/pdf-to-word");
+const HOME_URL = siteUrl("/");
 
 export const Route = createFileRoute("/pdf-to-word")({
   component: PdfToWordPage,
@@ -43,7 +46,12 @@ export const Route = createFileRoute("/pdf-to-word")({
             {
               "@type": "BreadcrumbList",
               itemListElement: [
-                { "@type": "ListItem", position: 1, name: "To_olT", item: "https://toolt.lovable.app/" },
+                {
+                  "@type": "ListItem",
+                  position: 1,
+                  name: "To_olT",
+                  item: HOME_URL,
+                },
                 { "@type": "ListItem", position: 2, name: "PDF to Word", item: URL },
               ],
             },
@@ -55,7 +63,7 @@ export const Route = createFileRoute("/pdf-to-word")({
                   name: "Is the PDF to Word converter really free?",
                   acceptedAnswer: {
                     "@type": "Answer",
-                    text: "Yes. To_olT is 100% free with no signup, no watermark and no file-size limit — everything runs locally in your browser.",
+                    text: "Yes. To_olT is 100% free with no signup and no watermark - everything runs locally in your browser. Large PDFs up to roughly 200 MB are supported.",
                   },
                 },
                 {
@@ -95,7 +103,10 @@ function PdfToWordPage() {
             <img src="/favicon.png?v=3" alt="To_olT logo" className="h-6 w-6" />
             <span className="text-sm font-semibold tracking-tight">To_olT</span>
           </Link>
-          <Link to="/" className="text-xs font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground">
+          <Link
+            to="/"
+            className="text-xs font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground"
+          >
             All tools
           </Link>
         </div>
@@ -111,29 +122,47 @@ function PdfToWordPage() {
           <span className="text-muted-foreground">Editable .docx in seconds.</span>
         </h1>
         <p className="mt-6 max-w-2xl text-base text-muted-foreground md:text-lg">
-          Drop a PDF and get a fully editable Microsoft Word (.docx) document — or a universal Rich Text (.rtf) file.
-          100% private: your PDF never leaves your browser. No accounts, no watermarks, no upload limits.
+          Drop a PDF and get a fully editable Microsoft Word (.docx) document - or a universal Rich
+          Text (.rtf) file. 100% private: your PDF never leaves your browser. No accounts, no
+          watermarks, no upload limits.
         </p>
 
         <div className="mt-8 flex flex-wrap gap-3">
-          <Button size="lg" onClick={() => setOpen(true)}>Convert PDF to Word</Button>
+          <Button size="lg" onClick={() => setOpen(true)}>
+            Convert PDF to Word
+          </Button>
           <Button size="lg" variant="outline" asChild>
-            <Link to="/">Browse all 100+ tools</Link>
+            {/* Live count so this never drifts from the registry again. */}
+            <Link to="/">Browse all {families.length + calculators.length} tools</Link>
           </Button>
         </div>
 
         <ul className="mt-10 grid grid-cols-1 gap-4 border-t border-foreground/10 pt-8 text-sm sm:grid-cols-3">
-          <li><strong className="block">Private by design</strong><span className="text-muted-foreground">Files stay on your device.</span></li>
-          <li><strong className="block">Editable output</strong><span className="text-muted-foreground">Real .docx and .rtf, not images.</span></li>
-          <li><strong className="block">Batch friendly</strong><span className="text-muted-foreground">Queue many PDFs, download as ZIP.</span></li>
+          <li>
+            <strong className="block">Private by design</strong>
+            <span className="text-muted-foreground">Files stay on your device.</span>
+          </li>
+          <li>
+            <strong className="block">Editable output</strong>
+            <span className="text-muted-foreground">Real .docx and .rtf, not images.</span>
+          </li>
+          <li>
+            <strong className="block">Batch friendly</strong>
+            <span className="text-muted-foreground">Queue many PDFs, download as ZIP.</span>
+          </li>
         </ul>
 
         <section className="mt-16">
           <h2 className="text-2xl font-semibold tracking-tight">How to convert a PDF to Word</h2>
           <ol className="mt-4 list-decimal space-y-2 pl-5 text-muted-foreground">
-            <li>Click <em>Convert PDF to Word</em> and drop your PDF file (or many).</li>
-            <li>Pick <strong>Word document (.docx)</strong> or <strong>Rich Text (.rtf)</strong> as the output.</li>
-            <li>Download the converted Word file — everything happens locally.</li>
+            <li>
+              Click <em>Convert PDF to Word</em> and drop your PDF file (or many).
+            </li>
+            <li>
+              Pick <strong>Word document (.docx)</strong> or <strong>Rich Text (.rtf)</strong> as
+              the output.
+            </li>
+            <li>Download the converted Word file - everything happens locally.</li>
           </ol>
         </section>
 
@@ -142,15 +171,22 @@ function PdfToWordPage() {
           <div className="mt-4 space-y-4 text-sm">
             <div>
               <h3 className="font-medium">Is this PDF to Word converter really free?</h3>
-              <p className="text-muted-foreground">Yes — no signup, no watermark, no file size limit.</p>
+              <p className="text-muted-foreground">
+                Yes - no signup, no watermark, no file size limit.
+              </p>
             </div>
             <div>
               <h3 className="font-medium">Are my PDFs uploaded anywhere?</h3>
-              <p className="text-muted-foreground">No. Conversion happens in your browser via WebAssembly.</p>
+              <p className="text-muted-foreground">
+                No. Conversion happens in your browser via WebAssembly.
+              </p>
             </div>
             <div>
               <h3 className="font-medium">Does it work on scanned PDFs?</h3>
-              <p className="text-muted-foreground">This tool reads the PDF text layer. For scans, run the OCR tool first, then convert the recognized text.</p>
+              <p className="text-muted-foreground">
+                This tool reads the PDF text layer. For scans, run the OCR tool first, then convert
+                the recognized text.
+              </p>
             </div>
           </div>
         </section>
@@ -158,7 +194,7 @@ function PdfToWordPage() {
 
       <footer className="border-t border-foreground/10">
         <div className="mx-auto max-w-4xl px-6 py-8 text-xs text-muted-foreground">
-          © To_olT — every file tool, in your browser.
+          © To_olT - every file tool, in your browser.
         </div>
       </footer>
 

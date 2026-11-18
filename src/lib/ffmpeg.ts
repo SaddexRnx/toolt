@@ -1,4 +1,4 @@
-// Lazy singleton loader for ffmpeg.wasm (single-threaded core — no COOP/COEP needed).
+// Lazy singleton loader for ffmpeg.wasm (single-threaded core - no COOP/COEP needed).
 //
 // The ~30 MB core is fetched from unpkg (immutable version URL) rather than
 // bundled. For safety we hash both artifacts with SHA-384 and compare
@@ -15,7 +15,7 @@ const CORE_VERSION = "0.12.10";
 const CORE_BASE = `https://unpkg.com/@ffmpeg/core@${CORE_VERSION}/dist/umd`;
 
 // SHA-384 (base64) of the pinned CORE_VERSION artifacts. Computed once from
-// the CDN — any drift means the file was replaced and we refuse to load it.
+// the CDN - any drift means the file was replaced and we refuse to load it.
 const INTEGRITY = {
   js: "sKfkiFtvUk+vexk+0EUhEh366190/4WpgUAsUvaxEfyg7+E1Zt5Y5hrsU808g8Q9",
   wasm: "U1VDhkPYrM3wTCT4/vjSpSsKqG/UjljYrYCI4hBSJ02svbCkxuCi6U6u/peg5vpW",
@@ -68,12 +68,12 @@ export async function getFFmpeg(): Promise<FFmpeg> {
 }
 
 const stripExt = (name: string) => name.replace(/\.[^.]+$/, "");
-const sanitize = (name: string) => name.replace(/[^\w.\-]+/g, "_");
+const sanitize = (name: string) => name.replace(/[^\w.-]+/g, "_");
 
 /**
  * Run ffmpeg with the given args. Wrapped in a concurrency limiter so bulk
  * batches don't run the (single) FFmpeg instance from multiple callers at
- * the same time — that would corrupt its virtual filesystem.
+ * the same time - that would corrupt its virtual filesystem.
  */
 export async function runFFmpeg(
   file: File,
@@ -96,8 +96,16 @@ export async function runFFmpeg(
         filename: `${stripExt(file.name)}.${outputExt.toLowerCase()}`,
       };
     } finally {
-      try { await ff.deleteFile(inputName); } catch { /* noop */ }
-      try { await ff.deleteFile(outputName); } catch { /* noop */ }
+      try {
+        await ff.deleteFile(inputName);
+      } catch {
+        /* noop */
+      }
+      try {
+        await ff.deleteFile(outputName);
+      } catch {
+        /* noop */
+      }
     }
   });
 }

@@ -1,7 +1,10 @@
 // CSS builder tools (Batch D). Interactive style generators with live preview.
 import type { Calculator } from "./calculators";
 
-const n = (v: string, f = 0) => { const x = Number(v); return Number.isFinite(x) ? x : f; };
+const n = (v: string, f = 0) => {
+  const x = Number(v);
+  return Number.isFinite(x) ? x : f;
+};
 
 export const cssCalculators: Calculator[] = [
   // ---------------- Box shadow ----------------
@@ -13,15 +16,56 @@ export const cssCalculators: Calculator[] = [
     fields: [
       { id: "x", label: "Offset X", type: "number", default: 0, min: -100, max: 100, unit: "px" },
       { id: "y", label: "Offset Y", type: "number", default: 8, min: -100, max: 100, unit: "px" },
-      { id: "blur", label: "Blur radius", type: "number", default: 24, min: 0, max: 200, unit: "px" },
-      { id: "spread", label: "Spread", type: "number", default: -4, min: -100, max: 100, unit: "px" },
+      {
+        id: "blur",
+        label: "Blur radius",
+        type: "number",
+        default: 24,
+        min: 0,
+        max: 200,
+        unit: "px",
+      },
+      {
+        id: "spread",
+        label: "Spread",
+        type: "number",
+        default: -4,
+        min: -100,
+        max: 100,
+        unit: "px",
+      },
       { id: "color", label: "Color (rgba/hex)", type: "text", default: "rgba(0,0,0,0.25)" },
-      { id: "inset", label: "Inset", type: "select", default: "no", options: [ { value: "no", label: "No" }, { value: "yes", label: "Yes" } ] },
+      {
+        id: "inset",
+        label: "Inset",
+        type: "select",
+        default: "no",
+        options: [
+          { value: "no", label: "No" },
+          { value: "yes", label: "Yes" },
+        ],
+      },
     ],
     compute: (v) => {
-      const parts = [ v.inset === "yes" ? "inset" : "", `${n(v.x)}px`, `${n(v.y)}px`, `${n(v.blur)}px`, `${n(v.spread)}px`, v.color ].filter(Boolean).join(" ");
+      const parts = [
+        v.inset === "yes" ? "inset" : "",
+        `${n(v.x)}px`,
+        `${n(v.y)}px`,
+        `${n(v.blur)}px`,
+        `${n(v.spread)}px`,
+        v.color,
+      ]
+        .filter(Boolean)
+        .join(" ");
       return [
-        { label: "Preview", value: "", preview: { style: { boxShadow: parts, background: "#fff", borderRadius: "12px" }, text: " " } },
+        {
+          label: "Preview",
+          value: "",
+          preview: {
+            style: { boxShadow: parts, background: "#fff", borderRadius: "12px" },
+            text: " ",
+          },
+        },
         { label: "CSS", value: `box-shadow: ${parts};` },
         { label: "Tailwind", value: `shadow-[${parts.replace(/\s+/g, "_")}]` },
       ];
@@ -46,7 +90,20 @@ export const cssCalculators: Calculator[] = [
     compute: (v) => {
       const shadow = `${n(v.x)}px ${n(v.y)}px ${n(v.blur)}px ${v.color}`;
       return [
-        { label: "Preview", value: "", preview: { style: { textShadow: shadow, fontSize: `${n(v.size, 36)}px`, color: v.textColor, fontWeight: 700, background: "#fff" }, text: v.text || "Preview" } },
+        {
+          label: "Preview",
+          value: "",
+          preview: {
+            style: {
+              textShadow: shadow,
+              fontSize: `${n(v.size, 36)}px`,
+              color: v.textColor,
+              fontWeight: 700,
+              background: "#fff",
+            },
+            text: v.text || "Preview",
+          },
+        },
         { label: "CSS", value: `text-shadow: ${shadow};` },
       ];
     },
@@ -61,13 +118,28 @@ export const cssCalculators: Calculator[] = [
     fields: [
       { id: "tl", label: "Top-left", type: "number", default: 16, min: 0, max: 200, unit: "px" },
       { id: "tr", label: "Top-right", type: "number", default: 16, min: 0, max: 200, unit: "px" },
-      { id: "br", label: "Bottom-right", type: "number", default: 16, min: 0, max: 200, unit: "px" },
+      {
+        id: "br",
+        label: "Bottom-right",
+        type: "number",
+        default: 16,
+        min: 0,
+        max: 200,
+        unit: "px",
+      },
       { id: "bl", label: "Bottom-left", type: "number", default: 16, min: 0, max: 200, unit: "px" },
     ],
     compute: (v) => {
       const r = `${n(v.tl)}px ${n(v.tr)}px ${n(v.br)}px ${n(v.bl)}px`;
       return [
-        { label: "Preview", value: "", preview: { style: { borderRadius: r, background: "linear-gradient(135deg,#3b82f6,#a855f7)" }, text: " " } },
+        {
+          label: "Preview",
+          value: "",
+          preview: {
+            style: { borderRadius: r, background: "linear-gradient(135deg,#3b82f6,#a855f7)" },
+            text: " ",
+          },
+        },
         { label: "CSS", value: `border-radius: ${r};` },
       ];
     },
@@ -85,10 +157,40 @@ export const cssCalculators: Calculator[] = [
       { id: "fg", label: "Text color", type: "text", default: "#ffffff" },
       { id: "px", label: "Padding X", type: "number", default: 20, min: 0, max: 80, unit: "px" },
       { id: "py", label: "Padding Y", type: "number", default: 12, min: 0, max: 60, unit: "px" },
-      { id: "radius", label: "Border radius", type: "number", default: 8, min: 0, max: 100, unit: "px" },
+      {
+        id: "radius",
+        label: "Border radius",
+        type: "number",
+        default: 8,
+        min: 0,
+        max: 100,
+        unit: "px",
+      },
       { id: "size", label: "Font size", type: "number", default: 15, min: 10, max: 40, unit: "px" },
-      { id: "weight", label: "Font weight", type: "select", default: "600", options: [ { value: "400", label: "Regular" }, { value: "500", label: "Medium" }, { value: "600", label: "Semibold" }, { value: "700", label: "Bold" } ] },
-      { id: "shadow", label: "Shadow", type: "select", default: "md", options: [ { value: "none", label: "None" }, { value: "sm", label: "Small" }, { value: "md", label: "Medium" }, { value: "lg", label: "Large" } ] },
+      {
+        id: "weight",
+        label: "Font weight",
+        type: "select",
+        default: "600",
+        options: [
+          { value: "400", label: "Regular" },
+          { value: "500", label: "Medium" },
+          { value: "600", label: "Semibold" },
+          { value: "700", label: "Bold" },
+        ],
+      },
+      {
+        id: "shadow",
+        label: "Shadow",
+        type: "select",
+        default: "md",
+        options: [
+          { value: "none", label: "None" },
+          { value: "sm", label: "Small" },
+          { value: "md", label: "Medium" },
+          { value: "lg", label: "Large" },
+        ],
+      },
     ],
     compute: (v) => {
       const shadowMap: Record<string, string> = {
@@ -111,7 +213,11 @@ export const cssCalculators: Calculator[] = [
       };
       const css = `background: ${v.bg};\ncolor: ${v.fg};\npadding: ${n(v.py)}px ${n(v.px)}px;\nborder-radius: ${n(v.radius)}px;\nfont-size: ${n(v.size, 15)}px;\nfont-weight: ${v.weight};\nbox-shadow: ${shadowMap[v.shadow]};\nborder: none;\ncursor: pointer;`;
       return [
-        { label: "Preview", value: "", preview: { style, text: v.label || "Button", bg: "#f5f5f5" } },
+        {
+          label: "Preview",
+          value: "",
+          preview: { style, text: v.label || "Button", bg: "#f5f5f5" },
+        },
         { label: "CSS", value: css },
       ];
     },
@@ -128,7 +234,15 @@ export const cssCalculators: Calculator[] = [
       { id: "angle", label: "Angle", type: "number", default: 90, min: 0, max: 360, unit: "deg" },
       { id: "a", label: "Color A", type: "text", default: "#3b82f6" },
       { id: "b", label: "Color B", type: "text", default: "#a855f7" },
-      { id: "size", label: "Font size", type: "number", default: 48, min: 12, max: 160, unit: "px" },
+      {
+        id: "size",
+        label: "Font size",
+        type: "number",
+        default: 48,
+        min: 12,
+        max: 160,
+        unit: "px",
+      },
     ],
     compute: (v) => {
       const bg = `linear-gradient(${n(v.angle)}deg, ${v.a}, ${v.b})`;
@@ -144,7 +258,11 @@ export const cssCalculators: Calculator[] = [
       };
       const css = `background: ${bg};\n-webkit-background-clip: text;\nbackground-clip: text;\ncolor: transparent;`;
       return [
-        { label: "Preview", value: "", preview: { style, text: v.text || "Gradient", bg: "#ffffff" } },
+        {
+          label: "Preview",
+          value: "",
+          preview: { style, text: v.text || "Gradient", bg: "#ffffff" },
+        },
         { label: "CSS", value: css },
       ];
     },
@@ -157,12 +275,53 @@ export const cssCalculators: Calculator[] = [
     title: "CSS filter builder",
     description: "Combine blur, brightness, contrast, grayscale, hue-rotate, saturation.",
     fields: [
-      { id: "blur", label: "Blur", type: "number", default: 0, min: 0, max: 40, step: 0.5, unit: "px" },
-      { id: "brightness", label: "Brightness", type: "number", default: 100, min: 0, max: 300, unit: "%" },
-      { id: "contrast", label: "Contrast", type: "number", default: 100, min: 0, max: 300, unit: "%" },
-      { id: "grayscale", label: "Grayscale", type: "number", default: 0, min: 0, max: 100, unit: "%" },
+      {
+        id: "blur",
+        label: "Blur",
+        type: "number",
+        default: 0,
+        min: 0,
+        max: 40,
+        step: 0.5,
+        unit: "px",
+      },
+      {
+        id: "brightness",
+        label: "Brightness",
+        type: "number",
+        default: 100,
+        min: 0,
+        max: 300,
+        unit: "%",
+      },
+      {
+        id: "contrast",
+        label: "Contrast",
+        type: "number",
+        default: 100,
+        min: 0,
+        max: 300,
+        unit: "%",
+      },
+      {
+        id: "grayscale",
+        label: "Grayscale",
+        type: "number",
+        default: 0,
+        min: 0,
+        max: 100,
+        unit: "%",
+      },
       { id: "hue", label: "Hue rotate", type: "number", default: 0, min: 0, max: 360, unit: "deg" },
-      { id: "saturate", label: "Saturate", type: "number", default: 100, min: 0, max: 300, unit: "%" },
+      {
+        id: "saturate",
+        label: "Saturate",
+        type: "number",
+        default: 100,
+        min: 0,
+        max: 300,
+        unit: "%",
+      },
       { id: "invert", label: "Invert", type: "number", default: 0, min: 0, max: 100, unit: "%" },
     ],
     compute: (v) => {
@@ -176,7 +335,17 @@ export const cssCalculators: Calculator[] = [
       if (n(v.invert) > 0) parts.push(`invert(${n(v.invert)}%)`);
       const filter = parts.join(" ") || "none";
       return [
-        { label: "Preview", value: "", preview: { style: { filter, background: "linear-gradient(135deg,#f59e0b,#ef4444,#a855f7,#3b82f6)" }, text: " " } },
+        {
+          label: "Preview",
+          value: "",
+          preview: {
+            style: {
+              filter,
+              background: "linear-gradient(135deg,#f59e0b,#ef4444,#a855f7,#3b82f6)",
+            },
+            text: " ",
+          },
+        },
         { label: "CSS", value: `filter: ${filter};` },
       ];
     },
@@ -187,19 +356,55 @@ export const cssCalculators: Calculator[] = [
     id: "css-transform",
     category: "CSS",
     title: "Transform builder",
-    description: "Rotate, scale, skew, and translate — combined into one transform.",
+    description: "Rotate, scale, skew, and translate - combined into one transform.",
     fields: [
-      { id: "rotate", label: "Rotate", type: "number", default: 0, min: -360, max: 360, unit: "deg" },
+      {
+        id: "rotate",
+        label: "Rotate",
+        type: "number",
+        default: 0,
+        min: -360,
+        max: 360,
+        unit: "deg",
+      },
       { id: "scale", label: "Scale", type: "number", default: 1, min: 0, max: 3, step: 0.05 },
       { id: "skewX", label: "Skew X", type: "number", default: 0, min: -60, max: 60, unit: "deg" },
       { id: "skewY", label: "Skew Y", type: "number", default: 0, min: -60, max: 60, unit: "deg" },
-      { id: "tx", label: "Translate X", type: "number", default: 0, min: -200, max: 200, unit: "px" },
-      { id: "ty", label: "Translate Y", type: "number", default: 0, min: -200, max: 200, unit: "px" },
+      {
+        id: "tx",
+        label: "Translate X",
+        type: "number",
+        default: 0,
+        min: -200,
+        max: 200,
+        unit: "px",
+      },
+      {
+        id: "ty",
+        label: "Translate Y",
+        type: "number",
+        default: 0,
+        min: -200,
+        max: 200,
+        unit: "px",
+      },
     ],
     compute: (v) => {
       const transform = `translate(${n(v.tx)}px, ${n(v.ty)}px) rotate(${n(v.rotate)}deg) scale(${n(v.scale, 1)}) skew(${n(v.skewX)}deg, ${n(v.skewY)}deg)`;
       return [
-        { label: "Preview", value: "", preview: { style: { transform, background: "linear-gradient(135deg,#3b82f6,#a855f7)", borderRadius: "12px" }, text: " ", bg: "#f5f5f5" } },
+        {
+          label: "Preview",
+          value: "",
+          preview: {
+            style: {
+              transform,
+              background: "linear-gradient(135deg,#3b82f6,#a855f7)",
+              borderRadius: "12px",
+            },
+            text: " ",
+            bg: "#f5f5f5",
+          },
+        },
         { label: "CSS", value: `transform: ${transform};` },
       ];
     },
@@ -210,10 +415,14 @@ export const cssCalculators: Calculator[] = [
     id: "css-clip-path",
     category: "CSS",
     title: "Clip-path shapes",
-    description: "Preset clip-path shapes: circle, ellipse, triangle, hexagon, star, arrow, chevron.",
+    description:
+      "Preset clip-path shapes: circle, ellipse, triangle, hexagon, star, arrow, chevron.",
     fields: [
       {
-        id: "shape", label: "Shape", type: "select", default: "hexagon",
+        id: "shape",
+        label: "Shape",
+        type: "select",
+        default: "hexagon",
         options: [
           { value: "circle", label: "Circle" },
           { value: "ellipse", label: "Ellipse" },
@@ -245,7 +454,15 @@ export const cssCalculators: Calculator[] = [
       };
       const clip = shapes[v.shape] ?? shapes.hexagon;
       return [
-        { label: "Preview", value: "", preview: { style: { clipPath: clip, background: "linear-gradient(135deg,#3b82f6,#a855f7)" }, text: " ", bg: "#f5f5f5" } },
+        {
+          label: "Preview",
+          value: "",
+          preview: {
+            style: { clipPath: clip, background: "linear-gradient(135deg,#3b82f6,#a855f7)" },
+            text: " ",
+            bg: "#f5f5f5",
+          },
+        },
         { label: "CSS", value: `clip-path: ${clip};` },
       ];
     },
@@ -258,14 +475,47 @@ export const cssCalculators: Calculator[] = [
     title: "Flexbox playground",
     description: "Visualize flex-direction, justify-content, align-items, wrap, and gap.",
     fields: [
-      { id: "direction", label: "flex-direction", type: "select", default: "row",
-        options: ["row","row-reverse","column","column-reverse"].map((x) => ({ value: x, label: x })) },
-      { id: "justify", label: "justify-content", type: "select", default: "flex-start",
-        options: ["flex-start","flex-end","center","space-between","space-around","space-evenly"].map((x) => ({ value: x, label: x })) },
-      { id: "align", label: "align-items", type: "select", default: "stretch",
-        options: ["stretch","flex-start","flex-end","center","baseline"].map((x) => ({ value: x, label: x })) },
-      { id: "wrap", label: "flex-wrap", type: "select", default: "nowrap",
-        options: ["nowrap","wrap","wrap-reverse"].map((x) => ({ value: x, label: x })) },
+      {
+        id: "direction",
+        label: "flex-direction",
+        type: "select",
+        default: "row",
+        options: ["row", "row-reverse", "column", "column-reverse"].map((x) => ({
+          value: x,
+          label: x,
+        })),
+      },
+      {
+        id: "justify",
+        label: "justify-content",
+        type: "select",
+        default: "flex-start",
+        options: [
+          "flex-start",
+          "flex-end",
+          "center",
+          "space-between",
+          "space-around",
+          "space-evenly",
+        ].map((x) => ({ value: x, label: x })),
+      },
+      {
+        id: "align",
+        label: "align-items",
+        type: "select",
+        default: "stretch",
+        options: ["stretch", "flex-start", "flex-end", "center", "baseline"].map((x) => ({
+          value: x,
+          label: x,
+        })),
+      },
+      {
+        id: "wrap",
+        label: "flex-wrap",
+        type: "select",
+        default: "nowrap",
+        options: ["nowrap", "wrap", "wrap-reverse"].map((x) => ({ value: x, label: x })),
+      },
       { id: "gap", label: "gap", type: "number", default: 8, min: 0, max: 60, unit: "px" },
       { id: "items", label: "Number of items", type: "number", default: 4, min: 1, max: 12 },
     ],
@@ -282,7 +532,11 @@ export const cssCalculators: Calculator[] = [
       };
       const css = `display: flex;\nflex-direction: ${v.direction};\njustify-content: ${v.justify};\nalign-items: ${v.align};\nflex-wrap: ${v.wrap};\ngap: ${n(v.gap)}px;`;
       return [
-        { label: "Preview", value: "", preview: { style, children: Math.max(1, Math.min(12, n(v.items, 4))) } },
+        {
+          label: "Preview",
+          value: "",
+          preview: { style, children: Math.max(1, Math.min(12, n(v.items, 4))) },
+        },
         { label: "CSS", value: css },
       ];
     },
@@ -298,7 +552,11 @@ export const cssCalculators: Calculator[] = [
       { id: "cols", label: "Columns", type: "number", default: 3, min: 1, max: 12 },
       { id: "rows", label: "Rows", type: "number", default: 2, min: 1, max: 8 },
       { id: "gap", label: "Gap", type: "number", default: 8, min: 0, max: 60, unit: "px" },
-      { id: "template", label: "Column template", type: "select", default: "equal",
+      {
+        id: "template",
+        label: "Column template",
+        type: "select",
+        default: "equal",
         options: [
           { value: "equal", label: "Equal (1fr repeated)" },
           { value: "auto", label: "Auto-fit minmax" },
@@ -309,7 +567,7 @@ export const cssCalculators: Calculator[] = [
     compute: (v) => {
       const cols = Math.max(1, Math.min(12, n(v.cols, 3)));
       const rows = Math.max(1, Math.min(8, n(v.rows, 2)));
-      let template = "";
+      let template: string;
       if (v.template === "auto") template = "repeat(auto-fit, minmax(120px, 1fr))";
       else if (v.template === "sidebar") template = "240px 1fr";
       else template = `repeat(${cols}, 1fr)`;
@@ -339,7 +597,8 @@ export const cssCalculators: Calculator[] = [
       { id: "h", label: "Height ratio", type: "number", default: 9, min: 1, max: 100 },
     ],
     compute: (v) => {
-      const w = n(v.w, 16), h = n(v.h, 9);
+      const w = n(v.w, 16),
+        h = n(v.h, 9);
       const style: Record<string, string> = {
         aspectRatio: `${w} / ${h}`,
         background: "linear-gradient(135deg,#3b82f6,#a855f7)",
@@ -347,7 +606,11 @@ export const cssCalculators: Calculator[] = [
         width: "100%",
       };
       return [
-        { label: "Preview", value: `${w} : ${h}`, preview: { style, text: `${w}:${h}`, bg: "#f5f5f5" } },
+        {
+          label: "Preview",
+          value: `${w} : ${h}`,
+          preview: { style, text: `${w}:${h}`, bg: "#f5f5f5" },
+        },
         { label: "CSS", value: `aspect-ratio: ${w} / ${h};` },
         { label: "Decimal", value: (w / h).toFixed(4) },
       ];
@@ -362,7 +625,10 @@ export const cssCalculators: Calculator[] = [
     description: "Pick a Penner-style easing curve and copy its cubic-bezier.",
     fields: [
       {
-        id: "easing", label: "Curve", type: "select", default: "easeInOut",
+        id: "easing",
+        label: "Curve",
+        type: "select",
+        default: "easeInOut",
         options: [
           { value: "linear", label: "Linear" },
           { value: "ease", label: "ease" },

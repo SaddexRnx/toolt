@@ -1,15 +1,21 @@
 // Captures the original Error out-of-band so server.ts can recover the stack
 // when h3 has already swallowed the throw into a generic 500 Response.
 
-let lastCapturedError: { error: unknown; at: number } | undefined;
+type Captured = { error: unknown; at: number };
+
+// A FIFO window instead of a single slot: an unrelated noisy error logged a
+// moment later must not displace the request's real failure.
+const QUEUE_LIMIT = 8;
+let queue: Captured[] = [];
 const TTL_MS = 5_000;
 
 function record(error: unknown) {
-  lastCapturedError = { error, at: Date.now() };
+  queue.push({ error, at: Date.now() });
+  if (queue.length > QUEUE_LIMIT) queue = queue.slice(-QUEUE_LIMIT);
 }
 
-// h3's HTTPError serializes to {"status":500,"unhandled":true,"message":"HTTPError"} —
-// no stack, no cause — so a plain console.error(error) reaches the log pipeline with
+// h3's HTTPError serializes to {"status":500,"unhandled":true,"message":"HTTPError"} -
+// no stack, no cause - so a plain console.error(error) reaches the log pipeline with
 // the failure detail stripped. Expand Error-like args into a string that keeps the
 // message, stack, and the full cause chain.
 const CAUSE_DEPTH_LIMIT = 5;
@@ -49,8 +55,8 @@ function isErrorLike(value: unknown): value is Error {
   return value instanceof Error;
 }
 
-// Wrap console.error so errors logged by any layer — including h3's internal
-// unhandled-error logging, which this file cannot hook directly — are both
+// Wrap console.error so errors logged by any layer - including h3's internal
+// unhandled-error logging, which this file cannot hook directly - are both
 // recorded for consumeLastCapturedError and expanded before serialization.
 const originalConsoleError = console.error.bind(console);
 console.error = (...args: unknown[]) => {
@@ -70,12 +76,7 @@ if (typeof globalThis.addEventListener === "function") {
 }
 
 export function consumeLastCapturedError(): unknown {
-  if (!lastCapturedError) return undefined;
-  if (Date.now() - lastCapturedError.at > TTL_MS) {
-    lastCapturedError = undefined;
-    return undefined;
-  }
-  const { error } = lastCapturedError;
-  lastCapturedError = undefined;
-  return error;
+  const now = Date.now();
+  while (queue.length && now - queue[0].at > TTL_MS) queue.shift();
+  return queue.shift()?.error;
 }

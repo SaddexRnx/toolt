@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 import { renderPdfPages } from "@/lib/preview";
@@ -28,39 +34,61 @@ export function OutputPreview({ open, onClose, blob, filename, onDownload }: Pro
   useEffect(() => {
     if (!open || !blob) return;
     const revokes: string[] = [];
-    setLoading(true);
-    setUrl(null);
-    setPdfPages([]);
-    setActivePage(0);
-    setText(null);
-    setZoom(1);
+    let cancelled = false;
 
-    (async () => {
-      const isImage = blob.type.startsWith("image/") || /\.(png|jpe?g|webp|gif|bmp|avif|tiff?|svg)$/i.test(filename);
+    // All setState calls live inside the async run callback (invoked by the
+    // effect, synchronously executed until the first await) which resets view
+    // state and renders the new blob.
+    const run = async () => {
+      setLoading(true);
+      setUrl(null);
+      setPdfPages([]);
+      setActivePage(0);
+      setText(null);
+      setZoom(1);
+
+      const isImage =
+        blob.type.startsWith("image/") ||
+        /\.(png|jpe?g|webp|gif|bmp|avif|tiff?|svg)$/i.test(filename);
       const isPdf = blob.type === "application/pdf" || /\.pdf$/i.test(filename);
       const isText = TEXT_MIME.test(blob.type) || TEXT_EXT.test(filename);
 
       if (isImage) {
         const u = URL.createObjectURL(blob);
+        if (cancelled) {
+          URL.revokeObjectURL(u);
+          return;
+        }
         revokes.push(u);
         setUrl(u);
         setKind("image");
       } else if (isPdf) {
         const pages = await renderPdfPages(blob, 30, 1.5);
+        if (cancelled) {
+          // Preview was closed while rendering: release the page URLs here
+          // because the cleanup already ran and can no longer see them.
+          pages.forEach((p) => URL.revokeObjectURL(p));
+          return;
+        }
         pages.forEach((p) => revokes.push(p));
         setPdfPages(pages);
         setKind("pdf");
       } else if (isText) {
         const slice = blob.slice(0, 20_000);
-        setText(await slice.text());
+        const t = await slice.text();
+        if (cancelled) return;
+        setText(t);
         setKind("text");
       } else {
         setKind("binary");
       }
-      setLoading(false);
-    })();
+      if (!cancelled) setLoading(false);
+    };
+
+    void run();
 
     return () => {
+      cancelled = true;
       revokes.forEach((u) => URL.revokeObjectURL(u));
     };
   }, [open, blob, filename]);
@@ -76,19 +104,47 @@ export function OutputPreview({ open, onClose, blob, filename, onDownload }: Pro
         <DialogHeader>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <DialogTitle className="text-lg font-semibold tracking-tight">Preview output</DialogTitle>
-              <DialogDescription className="font-mono text-xs break-all">{filename}</DialogDescription>
+              <DialogTitle className="text-lg font-semibold tracking-tight">
+                Preview output
+              </DialogTitle>
+              <DialogDescription className="font-mono text-xs break-all">
+                {filename}
+              </DialogDescription>
             </div>
             {showZoom && (
-              <div className="flex shrink-0 items-center gap-1 rounded border border-foreground/10 p-0.5" role="group" aria-label="Zoom controls">
-                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={zoomOut} aria-label="Zoom out">
+              <div
+                className="flex shrink-0 items-center gap-1 rounded border border-foreground/10 p-0.5"
+                role="group"
+                aria-label="Zoom controls"
+              >
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7"
+                  onClick={zoomOut}
+                  aria-label="Zoom out"
+                >
                   <ZoomOut className="h-3.5 w-3.5" />
                 </Button>
-                <span className="w-10 text-center font-mono text-[11px] tabular-nums">{Math.round(zoom * 100)}%</span>
-                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={zoomIn} aria-label="Zoom in">
+                <span className="w-10 text-center font-mono text-[11px] tabular-nums">
+                  {Math.round(zoom * 100)}%
+                </span>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7"
+                  onClick={zoomIn}
+                  aria-label="Zoom in"
+                >
                   <ZoomIn className="h-3.5 w-3.5" />
                 </Button>
-                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={zoomReset} aria-label="Reset zoom">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7"
+                  onClick={zoomReset}
+                  aria-label="Reset zoom"
+                >
                   <RotateCcw className="h-3.5 w-3.5" />
                 </Button>
               </div>
@@ -98,7 +154,11 @@ export function OutputPreview({ open, onClose, blob, filename, onDownload }: Pro
 
         <div className="min-h-[240px] flex-1 overflow-auto rounded border border-foreground/10 bg-foreground/[0.03] p-3">
           {loading ? (
-            <div className="flex h-full items-center justify-center text-muted-foreground">
+            <div
+              className="flex h-full items-center justify-center text-muted-foreground"
+              aria-live="polite"
+              aria-busy="true"
+            >
               <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Rendering preview…
             </div>
           ) : kind === "image" && url ? (
@@ -113,7 +173,10 @@ export function OutputPreview({ open, onClose, blob, filename, onDownload }: Pro
           ) : kind === "pdf" && pdfPages.length > 0 ? (
             <div className="flex h-full gap-3">
               {pdfPages.length > 1 && (
-                <div className="w-24 shrink-0 space-y-1 overflow-y-auto" aria-label="PDF page thumbnails">
+                <div
+                  className="w-24 shrink-0 space-y-1 overflow-y-auto"
+                  aria-label="PDF page thumbnails"
+                >
                   {pdfPages.map((p, i) => (
                     <button
                       key={i}
@@ -161,7 +224,9 @@ export function OutputPreview({ open, onClose, blob, filename, onDownload }: Pro
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button variant="ghost" onClick={onClose}>Close</Button>
+          <Button variant="ghost" onClick={onClose}>
+            Close
+          </Button>
           <Button onClick={onDownload}>
             <Download className="mr-2 h-4 w-4" /> Download
           </Button>

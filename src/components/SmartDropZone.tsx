@@ -51,6 +51,31 @@ export function SmartDropZone({ onPick, onHide }: Props) {
     });
   }, [matches, activeCat, query]);
 
+  // Multi-hop routes: for each directly matching family, look one step further
+  // for families that consume its intermediate outputs to reach formats the
+  // first family alone cannot produce.
+  const hopChains = useMemo(() => {
+    const map = new Map<string, Family[]>();
+    if (matches.length === 0) return map;
+    const outs = (f: Family) =>
+      f.mode === "per-file" ? f.outputs.map((o) => o.ext) : [f.outputExt];
+    const directOuts = new Set(matches.flatMap(outs));
+    for (const first of matches) {
+      const intermediates = outs(first);
+      const follows: Family[] = [];
+      for (const next of families) {
+        if (next.id === first.id) continue;
+        if (next.inputExts.includes("ANY")) continue;
+        if (!next.inputExts.some((e) => intermediates.includes(e))) continue;
+        if (!outs(next).some((e) => !directOuts.has(e))) continue;
+        follows.push(next);
+        if (follows.length >= 3) break;
+      }
+      if (follows.length > 0) map.set(first.id, follows);
+    }
+    return map;
+  }, [matches]);
+
   const handleFiles = (list: FileList | null) => {
     if (!list || list.length === 0) return;
     setFiles(Array.from(list));
@@ -105,9 +130,7 @@ export function SmartDropZone({ onPick, onHide }: Props) {
         >
           <Upload className="h-7 w-7 opacity-60 sm:h-8 sm:w-8" />
           <div className="text-sm font-medium sm:text-base">{t("smart.drop.label")}</div>
-          <div className="text-xs text-muted-foreground sm:text-sm">
-            {t("smart.drop.hint")}
-          </div>
+          <div className="text-xs text-muted-foreground sm:text-sm">{t("smart.drop.hint")}</div>
           <input
             id="smart-drop-input"
             type="file"
@@ -118,7 +141,7 @@ export function SmartDropZone({ onPick, onHide }: Props) {
         </label>
       ) : (
         <div className="overflow-hidden rounded-md border border-foreground/10 bg-background">
-          {/* File bar — grid on mobile, flex on desktop */}
+          {/* File bar - grid on mobile, flex on desktop */}
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-foreground/10 px-3 py-2.5 sm:flex sm:flex-wrap sm:justify-between sm:px-4 sm:py-3">
             <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs sm:text-sm">
               <FileIcon className="h-4 w-4 shrink-0 opacity-60" />
@@ -164,7 +187,8 @@ export function SmartDropZone({ onPick, onHide }: Props) {
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
                 aria-label={t("smart.clear")}
               >
-                <X className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{t("smart.clear")}</span>
+                <X className="h-3.5 w-3.5" />{" "}
+                <span className="hidden sm:inline">{t("smart.clear")}</span>
               </button>
             </div>
           </div>
@@ -191,7 +215,9 @@ export function SmartDropZone({ onPick, onHide }: Props) {
                       }`}
                     >
                       <span className="truncate">{label}</span>
-                      <span className={`font-mono text-[10px] ${active ? "opacity-70" : "opacity-50"}`}>
+                      <span
+                        className={`font-mono text-[10px] ${active ? "opacity-70" : "opacity-50"}`}
+                      >
                         {count}
                       </span>
                     </button>
@@ -221,6 +247,7 @@ export function SmartDropZone({ onPick, onHide }: Props) {
                       {filtered.map((f) => {
                         const outs =
                           f.mode === "per-file" ? f.outputs.map((o) => o.ext) : [f.outputExt];
+                        const chain = hopChains.get(f.id);
                         return (
                           <li key={f.id}>
                             <button
@@ -234,14 +261,23 @@ export function SmartDropZone({ onPick, onHide }: Props) {
                                     {f.category}
                                   </span>
                                 </div>
-                                <p className="line-clamp-1 text-xs text-muted-foreground">{f.description}</p>
+                                <p className="line-clamp-1 text-xs text-muted-foreground">
+                                  {f.description}
+                                </p>
+                                {chain && chain.length > 0 && (
+                                  <p className="line-clamp-1 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/80">
+                                    {t("smart.chain", {
+                                      chain: chain
+                                        .slice(0, 2)
+                                        .map((c) => c.title)
+                                        .join(" \u2192 "),
+                                    })}
+                                  </p>
+                                )}
                               </div>
                               <div className="hidden shrink-0 flex-wrap items-center justify-end gap-1 font-mono text-[10px] uppercase tracking-widest sm:flex">
                                 {outs.slice(0, 4).map((e) => (
-                                  <span
-                                    key={e}
-                                    className="rounded bg-foreground/10 px-1.5 py-0.5"
-                                  >
+                                  <span key={e} className="rounded bg-foreground/10 px-1.5 py-0.5">
                                     {e}
                                   </span>
                                 ))}

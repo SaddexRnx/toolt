@@ -10,9 +10,9 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
 import { I18nProvider } from "../lib/i18n";
 import { ThemeProvider } from "../lib/theme";
+import { CommandPalette } from "../components/CommandPalette";
 
 function NotFoundComponent() {
   return (
@@ -36,12 +36,9 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error, reset }: { error: unknown; reset: () => void }) {
   console.error(error);
   const router = useRouter();
-  useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -81,10 +78,26 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { name: "theme-color", content: "#000000" },
       { title: "To_olT" },
-      { name: "description", content: "To_olT — browser-based file tools." },
+      { name: "description", content: "To_olT - browser-based file tools." },
       { property: "og:site_name", content: "To_olT" },
       { property: "og:type", content: "website" },
+      { property: "og:title", content: "To_olT - every file tool, in your browser" },
+      {
+        property: "og:description",
+        content:
+          "Convert, compress, merge, split, extract, format, hash, scan and generate. All locally in your browser, no uploads.",
+      },
+      { property: "og:image", content: "/og.png" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "To_olT - every file tool, in your browser" },
+      {
+        name: "twitter:description",
+        content:
+          "Convert, compress, merge, split, extract, format, hash, scan and generate. All locally in your browser, no uploads.",
+      },
+      { name: "twitter:image", content: "/og.png" },
     ],
     links: [
       {
@@ -93,7 +106,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { rel: "icon", href: "/favicon.png?v=3", type: "image/png" },
       { rel: "shortcut icon", href: "/favicon.png?v=3", type: "image/png" },
-      { rel: "apple-touch-icon", href: "/favicon.png?v=3" },
+      { rel: "apple-touch-icon", href: "/icon-192.png" },
       { rel: "manifest", href: "/manifest.webmanifest" },
     ],
   }),
@@ -105,11 +118,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 // Inline pre-hydration script: apply saved theme + language BEFORE React
 // renders so light/dark and dir attributes are already correct on first paint.
-// This eliminates the light→dark flash and keeps SSR HTML consistent with
-// what the client will render after hydration.
+// This eliminates the flash and keeps SSR HTML consistent with what the client
+// will render after hydration. Dark is the primary theme: new visitors and
+// visitors with no explicit choice get dark; only a saved "light" wins.
 const NO_FLASH = `(() => { try {
   var t = localStorage.getItem('toolt.theme');
-  if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  if (!t) t = 'dark';
+  else t = t === 'light' ? 'light' : 'dark';
   if (t === 'dark') document.documentElement.classList.add('dark');
   var l = localStorage.getItem('toolt.lang');
   if (l) { document.documentElement.lang = l; if (l === 'ar' || l === 'he' || l === 'fa') document.documentElement.dir = 'rtl'; }
@@ -133,12 +148,25 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
+  // Offline shell: registered in production only, after first paint, so it
+  // never interferes with the dev server's live modules.
+  useEffect(() => {
+    if (!import.meta.env.PROD || !("serviceWorker" in navigator)) return;
+    const id = window.setTimeout(() => {
+      navigator.serviceWorker.register("/sw.js").catch(() => {
+        /* offline support is best-effort */
+      });
+    }, 2000);
+    return () => window.clearTimeout(id);
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <I18nProvider>
           {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
           <Outlet />
+          <CommandPalette />
         </I18nProvider>
       </ThemeProvider>
     </QueryClientProvider>

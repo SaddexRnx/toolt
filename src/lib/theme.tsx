@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 
 export type Theme = "light" | "dark";
 
@@ -12,21 +20,33 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   // The pre-hydration script in __root already applied the correct theme class
-  // before React mounted. Read it back to stay in sync on first render.
-  const [theme, setThemeState] = useState<Theme>("light");
+  // before React mounted. Read it back on the very first render: initialising
+  // to "light" would let the `.dark` class be stripped for one frame (a visible
+  // flash for every dark-mode visitor) before the effect restores it.
+  const [theme, setThemeState] = useState<Theme>(() => {
+    if (typeof document === "undefined") return "dark";
+    return document.documentElement.classList.contains("dark") ? "dark" : "light";
+  });
 
   useEffect(() => {
-    try {
-      const hasDark =
-        typeof document !== "undefined" &&
-        document.documentElement.classList.contains("dark");
-      const saved = localStorage.getItem("toolt.theme") as Theme | null;
-      if (saved === "light" || saved === "dark") {
-        setThemeState(saved);
-      } else {
-        setThemeState(hasDark ? "dark" : "light");
+    const sync = () => {
+      try {
+        const saved = localStorage.getItem("toolt.theme") as Theme | null;
+        if (saved === "light" || saved === "dark") {
+          setThemeState(saved);
+        } else {
+          // Dark is the primary theme; only an explicitly saved choice wins.
+          setThemeState("dark");
+        }
+      } catch {
+        /* ignore */
       }
-    } catch { /* ignore */ }
+    };
+    // Defer the initial localStorage read to a task so the pre-hydration
+    // theme class painted by __root stays authoritative and the effect body
+    // itself carries no synchronous setState.
+    const id = window.setTimeout(sync, 0);
+    return () => window.clearTimeout(id);
   }, []);
 
   useEffect(() => {
@@ -37,13 +57,21 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const setTheme = useCallback((t: Theme) => {
     setThemeState(t);
-    try { localStorage.setItem("toolt.theme", t); } catch { /* ignore */ }
+    try {
+      localStorage.setItem("toolt.theme", t);
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   const toggle = useCallback(() => {
     setThemeState((cur) => {
       const next: Theme = cur === "dark" ? "light" : "dark";
-      try { localStorage.setItem("toolt.theme", next); } catch { /* ignore */ }
+      try {
+        localStorage.setItem("toolt.theme", next);
+      } catch {
+        /* ignore */
+      }
       return next;
     });
   }, []);

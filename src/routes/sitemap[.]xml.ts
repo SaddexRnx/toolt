@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
+import { catalog } from "@/lib/catalog";
+import { siteUrl } from "@/lib/site";
 
-const BASE_URL = "https://toolt.lovable.app";
+const BASE_URL = siteUrl("/").replace(/\/$/, "");
 
 interface SitemapEntry {
   path: string;
@@ -16,6 +18,11 @@ export const Route = createFileRoute("/sitemap.xml")({
         const entries: SitemapEntry[] = [
           { path: "/", changefreq: "weekly", priority: "1.0" },
           { path: "/pdf-to-word", changefreq: "monthly", priority: "0.9" },
+          ...catalog.map((tool) => ({
+            path: `/tools/${tool.id}`,
+            changefreq: "monthly" as const,
+            priority: tool.kind === "family" ? "0.8" : "0.7",
+          })),
         ];
 
         const urls = entries.map((e) =>

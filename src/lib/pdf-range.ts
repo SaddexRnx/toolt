@@ -18,6 +18,8 @@ export function parsePageRange(input: string, total: number): number[] {
       if (i >= 1 && i <= total) out.add(i);
     }
   }
+  if (out.size === 0 && total > 0)
+    throw new Error(`Page range matches nothing - this document has ${total} page(s).`);
   return [...out].sort((x, y) => x - y);
 }
 

@@ -62,6 +62,7 @@
 }
 
 :root {
+  color-scheme: light;
   --radius: 0.5rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -97,8 +98,8 @@
   --sidebar-ring: oklch(0.145 0 0);
 }
 
-
 .dark {
+  color-scheme: dark;
   --background: oklch(0.129 0.042 264.695);
   --foreground: oklch(0.984 0.003 247.858);
   --card: oklch(0.208 0.042 265.755);
@@ -144,17 +145,7 @@
   }
 }
 
-/* Hide the "Edit with Lovable" badge */
-#lovable-badge,
-[id^="lovable-badge"],
-a[href*="lovable.dev"][target="_blank"] {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
-
-/* Brand accent — solid green (no gradients). */
+/* Brand accent - solid green (no gradients). */
 :root {
   --brand: oklch(0.72 0.18 148);
   --brand-soft: oklch(0.72 0.18 148 / 0.18);
@@ -170,8 +161,13 @@ a[href*="lovable.dev"][target="_blank"] {
 
 /* Brand dot with a soft pulsing halo (single solid color, no gradient). */
 @keyframes brand-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 var(--brand-soft); }
-  50%      { box-shadow: 0 0 0 6px transparent; }
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--brand-soft);
+  }
+  50% {
+    box-shadow: 0 0 0 6px transparent;
+  }
 }
 @utility brand-dot {
   display: inline-block;
@@ -192,17 +188,26 @@ a[href*="lovable.dev"][target="_blank"] {
 
 /* Gentle fade+rise for hero elements. */
 @keyframes brand-rise {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 @utility brand-rise {
   animation: brand-rise 0.5s ease-out both;
 }
 
-/* Tool card — subtle lift + brand accent instead of full color inversion. */
+/* Tool card - subtle lift + brand accent instead of full color inversion. */
 @utility tool-card {
   position: relative;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
   border: 1px solid transparent;
 }
 .tool-card:hover {
@@ -217,9 +222,18 @@ a[href*="lovable.dev"][target="_blank"] {
   box-shadow: 0 0 0 3px var(--brand-soft);
 }
 @media (prefers-reduced-motion: reduce) {
-  .tool-card { transition: none; }
-  .tool-card:hover { transform: none; }
+  .tool-card {
+    transition: none;
+  }
+  .tool-card:hover {
+    transform: none;
+  }
+  .brand-dot,
+  .brand-dot-sm,
+  .brand-rise,
+  .tool-card::after,
+  .tool-card::before {
+    animation: none;
+    transition: none;
+  }
 }
-
-
-

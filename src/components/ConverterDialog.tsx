@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -30,21 +36,19 @@ import {
 } from "lucide-react";
 import type { Family, OutputOption } from "@/lib/converters";
 import { isAcceptedFile } from "@/lib/converters";
-import { limitForFamily, formatBytes, guardCooldown, markRan } from "@/lib/limits";
+import { limitForFamily, formatBytes, guardCooldown, markRan, guardFileSize } from "@/lib/limits";
 import { canPreview, makePreview } from "@/lib/preview";
 import { parsePageRange, validatePageRange } from "@/lib/pdf-range";
 import {
   loadHistory,
   saveEntry,
   removeEntry,
-  saveBlob,
   getBlob,
   type HistoryEntry,
 } from "@/lib/history";
 
 import { OutputPreview } from "@/components/OutputPreview";
 import { cn } from "@/lib/utils";
-
 
 type Props = { family: Family | null; onClose: () => void; initialFiles?: File[] | null };
 
@@ -64,7 +68,8 @@ type CombineState =
   | { kind: "error"; message: string };
 
 type NameMode = "keep" | "suffix" | "timestamp";
-type ZipState = { kind: "idle" } | { kind: "working"; percent: number } | { kind: "error"; message: string };
+type ZipState =
+  { kind: "idle" } | { kind: "working"; percent: number } | { kind: "error"; message: string };
 
 let uid = 0;
 const nextId = () => `${Date.now()}-${uid++}`;
@@ -94,7 +99,6 @@ const stripExt = (name: string) => {
   return dot > 0 ? name.slice(0, dot) : name;
 };
 
-
 export function ConverterDialog({ family, onClose, initialFiles }: Props) {
   const [items, setItems] = useState<QueueItem[]>([]);
   const [dragOver, setDragOver] = useState(false);
@@ -112,7 +116,14 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
   const autoSelectedRef = useRef(false);
   const cancelRef = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
-
+  // Object URLs owned by this dialog, revoked on unmount (also covers previews
+  // that resolve after the dialog closes, where state-based cleanup misses).
+  const urlsRef = useRef<string[]>([]);
+  const disposedRef = useRef(false);
+  const ownUrl = useCallback((url: string) => {
+    urlsRef.current.push(url);
+    return url;
+  }, []);
 
   const perFileOutputs: OutputOption[] = family?.mode === "per-file" ? family.outputs : [];
   const selectedOutput = perFileOutputs[outputIndex];
@@ -136,10 +147,9 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
       });
       return [];
     });
-    setCombineState((prev) => {
-      if (prev.kind === "done") URL.revokeObjectURL(prev.blob ? "" : "");
-      return { kind: "idle" };
-    });
+    // Combine-mode results are held as raw Blob (no object URL), so only
+    // state needs resetting here.
+    setCombineState({ kind: "idle" });
     setZipState({ kind: "idle" });
     setOutputIndex(0);
     autoSelectedRef.current = false;
@@ -151,13 +161,17 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
 
   useEffect(() => {
     return () => {
-      setItems((prev) => {
-        prev.forEach((i) => {
-          if (i.status.kind === "done") URL.revokeObjectURL(i.status.url);
-          if (i.preview) URL.revokeObjectURL(i.preview);
-        });
-        return prev;
+      // Revoke every object URL owned by this dialog instance. Double-revoking
+      // URLs already cleaned via state updates is harmless (no-op).
+      disposedRef.current = true;
+      urlsRef.current.forEach((u) => {
+        try {
+          URL.revokeObjectURL(u);
+        } catch {
+          /* noop */
+        }
       });
+      urlsRef.current = [];
     };
   }, []);
 
@@ -183,18 +197,21 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
     return [...seen.entries()].filter(([, n]) => n > 1).map(([n]) => n);
   }, [items, nameMode, nameSuffix, family]);
 
-  // Keyboard shortcut: Enter to convert (unless typing in input/select)
+  // Keyboard shortcut: Enter to convert. Skips when focus sits on any
+  // interactive element (inputs, selects, buttons, links, the dropzone itself)
+  // so Enter still activates those controls instead of being swallowed.
   useEffect(() => {
     if (!family) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key !== "Enter" || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
-      const tag = (e.target as HTMLElement | null)?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      const el = e.target as HTMLElement | null;
+      if (el?.closest("input, textarea, select, button, a, [role=button]")) return;
       // Prevent triggering when a nested dialog is open
       if (previewFor) return;
       e.preventDefault();
       if (family.mode === "per-file") {
-        if (items.some((i) => i.status.kind === "pending" || i.status.kind === "error")) runPerFile();
+        if (items.some((i) => i.status.kind === "pending" || i.status.kind === "error"))
+          runPerFile();
       } else if (items.some((i) => i.status.kind !== "rejected") && combineState.kind !== "done") {
         runCombine();
       }
@@ -203,6 +220,34 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
     return () => document.removeEventListener("keydown", handler);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [family, items, combineState, previewFor]);
+
+  const filteredHistory = useMemo(() => {
+    const q = historyQuery.trim().toLowerCase();
+    if (!q) return history;
+    return history.filter(
+      (h) =>
+        h.outputFilename.toLowerCase().includes(q) ||
+        h.inputName.toLowerCase().includes(q) ||
+        h.outputExt.toLowerCase().includes(q) ||
+        h.outputLabel.toLowerCase().includes(q),
+    );
+  }, [history, historyQuery]);
+
+  // Consume files handed over from Smart Drop exactly once per family.
+  const initialConsumedRef = useRef(false);
+  useEffect(() => {
+    if (!family) {
+      initialConsumedRef.current = false;
+      return;
+    }
+    if (initialConsumedRef.current) return;
+    if (!initialFiles || initialFiles.length === 0) return;
+    initialConsumedRef.current = true;
+    const dt = new DataTransfer();
+    initialFiles.forEach((f) => dt.items.add(f));
+    acceptFiles(dt.files);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [family, initialFiles]);
 
   if (!family) return null;
 
@@ -224,10 +269,16 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
     queued.forEach((it) => {
       if (it.status.kind === "rejected") return;
       if (!canPreview(it.file)) return;
-      makePreview(it.file).then((url) => {
-        if (!url) return;
-        setItems((prev) => prev.map((p) => (p.id === it.id ? { ...p, preview: url } : p)));
-      });
+      makePreview(it.file)
+        .then((url) => {
+          // Guard against results resolving after dialog close/clear.
+          if (!url || disposedRef.current) return;
+          ownUrl(url);
+          setItems((prev) => prev.map((p) => (p.id === it.id ? { ...p, preview: url } : p)));
+        })
+        .catch(() => {
+          /* previews are best-effort */
+        });
     });
   };
 
@@ -242,17 +293,19 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
           file,
           status: {
             kind: "rejected" as const,
-            reason: `Unsupported type — expected ${family.inputExts.join(", ")}`,
+            reason: `Unsupported type - expected ${family.inputExts.join(", ")}`,
           },
         };
       }
-      if (file.size > sizeLimit) {
+      try {
+        guardFileSize(file, sizeLimit);
+      } catch (e) {
         return {
           id: nextId(),
           file,
           status: {
             kind: "rejected" as const,
-            reason: `File is ${formatBytes(file.size)} — this tool accepts up to ${formatBytes(sizeLimit)}.`,
+            reason: e instanceof Error ? e.message : "File is too large.",
           },
         };
       }
@@ -270,22 +323,6 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
     }
     generatePreviews(mapped);
   };
-
-  const initialConsumedRef = useRef(false);
-  useEffect(() => {
-    if (!family) {
-      initialConsumedRef.current = false;
-      return;
-    }
-    if (initialConsumedRef.current) return;
-    if (!initialFiles || initialFiles.length === 0) return;
-    initialConsumedRef.current = true;
-    const dt = new DataTransfer();
-    initialFiles.forEach((f) => dt.items.add(f));
-    acceptFiles(dt.files);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [family, initialFiles]);
-
 
   const removeItem = (id: string) => {
     setItems((prev) => {
@@ -315,7 +352,7 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
       const bytes = await doc.save();
       const base = file.name.replace(/\.[^.]+$/, "");
       return {
-        blob: new Blob([bytes as BlobPart], { type: "application/pdf" }),
+        blob: new Blob([new Uint8Array(bytes)], { type: "application/pdf" }),
         filename: `${base}-page-${pages[0]}.pdf`,
       };
     }
@@ -331,13 +368,99 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
     return { blob, filename: `${base}-pages.zip` };
   };
 
+  const convertOne = async (item: QueueItem, opts?: { skipCooldown?: boolean }) => {
+    if (family.mode !== "per-file" || !selectedOutput) return;
+    // Debounce manual retries (double-click, stuck keys). Batch runs acquire
+    // the cooldown once up-front and skip this per-file guard.
+    if (!opts?.skipCooldown) {
+      try {
+        guardCooldown(`convert:${family.id}`, 250);
+      } catch {
+        return;
+      }
+    }
+    markRan(`convert:${family.id}`);
+    setItems((prev) =>
+      prev.map((i) => {
+        if (i.id !== item.id) return i;
+        if (i.status.kind === "done") URL.revokeObjectURL(i.status.url);
+        return { ...i, status: { kind: "working" } };
+      }),
+    );
+    try {
+      const result = await runWithRange(item.file);
+      const url = ownUrl(URL.createObjectURL(result.blob));
+      setItems((prev) =>
+        prev.map((i) =>
+          i.id === item.id
+            ? {
+                ...i,
+                status: {
+                  kind: "done",
+                  url,
+                  filename: result.filename,
+                  size: result.blob.size,
+                  blob: result.blob,
+                },
+              }
+            : i,
+        ),
+      );
+      logHistory(item.file, result, selectedOutput.ext, selectedOutput.label);
+    } catch (e) {
+      setItems((prev) =>
+        prev.map((i) =>
+          i.id === item.id
+            ? {
+                ...i,
+                status: { kind: "error", message: e instanceof Error ? e.message : String(e) },
+              }
+            : i,
+        ),
+      );
+    }
+  };
+
+  const runPerFile = async () => {
+    if (family.mode !== "per-file" || !selectedOutput) return;
+    // Debounce double-runs once per batch instead of once per file, so bulk
+    // queues never fail fast consecutive files with a cooldown error.
+    try {
+      guardCooldown(`convert:${family.id}`, 250);
+    } catch {
+      return;
+    }
+    cancelRef.current = false;
+    const pending = items.filter((i) => i.status.kind === "pending" || i.status.kind === "error");
+    const processed = new Set<string>();
+    for (const item of pending) {
+      if (cancelRef.current) break;
+      processed.add(item.id);
+      await convertOne(item, { skipCooldown: true });
+    }
+    cancelRef.current = false;
+    // Restore files that never got a chance to run back to pending so the
+    // summary stays truthful and the next run picks them up.
+    const interrupted = pending.filter((p) => !processed.has(p.id));
+    if (interrupted.length > 0) {
+      const ids = new Set(interrupted.map((p) => p.id));
+      setItems((prev) =>
+        prev.map((i) => {
+          if (!ids.has(i.id)) return i;
+          if (i.status.kind === "done" || i.status.kind === "rejected") return i;
+          return { ...i, status: { kind: "pending" } };
+        }),
+      );
+    }
+  };
+
   const logHistory = (
     input: File,
     result: { blob: Blob; filename: string },
     ext: string,
     label: string,
   ) => {
-    const id = saveEntry({
+    saveEntry({
       familyId: family.id,
       familyTitle: family.title,
       category: family.category,
@@ -350,81 +473,12 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
       nameMode,
       nameSuffix: nameMode === "suffix" ? nameSuffix : undefined,
       pageRange: isPdfSplit ? pageRange : undefined,
-      hasBlob: true,
-    });
-    void saveBlob(id, result.blob);
-  };
-
-  const convertOne = async (item: QueueItem) => {
-    if (family.mode !== "per-file" || !selectedOutput) return;
-    // Debounce accidental double-clicks and stuck keys per tool.
-    try {
-      guardCooldown(`convert:${family.id}`, 250);
-    } catch (e) {
-      setItems((prev) =>
-        prev.map((i) =>
-          i.id === item.id
-            ? { ...i, status: { kind: "error", message: e instanceof Error ? e.message : String(e) } }
-            : i,
-        ),
-      );
-      return;
-    }
-    markRan(`convert:${family.id}`);
-    setItems((prev) =>
-      prev.map((i) => {
-        if (i.id !== item.id) return i;
-        if (i.status.kind === "done") URL.revokeObjectURL(i.status.url);
-        return { ...i, status: { kind: "working" } };
-      }),
-    );
-    try {
-      const result = await runWithRange(item.file);
-      const url = URL.createObjectURL(result.blob);
-      setItems((prev) =>
-        prev.map((i) =>
-          i.id === item.id
-            ? { ...i, status: { kind: "done", url, filename: result.filename, size: result.blob.size, blob: result.blob } }
-            : i,
-        ),
-      );
-      logHistory(item.file, result, selectedOutput.ext, selectedOutput.label);
-    } catch (e) {
-      setItems((prev) =>
-        prev.map((i) =>
-          i.id === item.id
-            ? { ...i, status: { kind: "error", message: e instanceof Error ? e.message : String(e) } }
-            : i,
-        ),
-      );
-    }
-  };
-
-  const runPerFile = async () => {
-    if (family.mode !== "per-file" || !selectedOutput) return;
-    cancelRef.current = false;
-    const pending = items.filter((i) => i.status.kind === "pending" || i.status.kind === "error");
-    for (const item of pending) {
-      if (cancelRef.current) {
-        // Restore any files that never got processed back to pending
-        setItems((prev) =>
-          prev.map((i) =>
-            i.id === item.id && i.status.kind !== "done" && i.status.kind !== "rejected"
-              ? { ...i, status: { kind: "error", message: "Canceled" } }
-              : i,
-          ),
-        );
-        break;
-      }
-      await convertOne(item);
-    }
-    cancelRef.current = false;
+    }, result.blob);
   };
 
   const cancelBatch = () => {
     cancelRef.current = true;
   };
-
 
   const runCombine = async () => {
     if (family.mode !== "combine") return;
@@ -434,7 +488,7 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
     try {
       const { blob, filename } = await family.run(valid);
       setCombineState({ kind: "done", filename, size: blob.size, blob });
-      const id = saveEntry({
+      saveEntry({
         familyId: family.id,
         familyTitle: family.title,
         category: family.category,
@@ -446,14 +500,11 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
         outputSize: blob.size,
         nameMode,
         nameSuffix: nameMode === "suffix" ? nameSuffix : undefined,
-        hasBlob: true,
-      });
-      void saveBlob(id, blob);
+      }, blob);
     } catch (e) {
       setCombineState({ kind: "error", message: e instanceof Error ? e.message : String(e) });
     }
   };
-
 
   const triggerDownload = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
@@ -468,7 +519,8 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
 
   const downloadAllSeparate = async () => {
     const done = items.filter(
-      (i): i is QueueItem & { status: Extract<FileStatus, { kind: "done" }> } => i.status.kind === "done",
+      (i): i is QueueItem & { status: Extract<FileStatus, { kind: "done" }> } =>
+        i.status.kind === "done",
     );
     for (let idx = 0; idx < done.length; idx++) {
       const it = done[idx];
@@ -480,7 +532,8 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
 
   const downloadAllZip = async () => {
     const done = items.filter(
-      (i): i is QueueItem & { status: Extract<FileStatus, { kind: "done" }> } => i.status.kind === "done",
+      (i): i is QueueItem & { status: Extract<FileStatus, { kind: "done" }> } =>
+        i.status.kind === "done",
     );
     if (done.length === 0) return;
     setZipState({ kind: "working", percent: 0 });
@@ -539,22 +592,10 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
     setPreviewFor({ blob, filename: entry.outputFilename });
   };
 
-  const filteredHistory = useMemo(() => {
-    const q = historyQuery.trim().toLowerCase();
-    if (!q) return history;
-    return history.filter(
-      (h) =>
-        h.outputFilename.toLowerCase().includes(q) ||
-        h.inputName.toLowerCase().includes(q) ||
-        h.outputExt.toLowerCase().includes(q) ||
-        h.outputLabel.toLowerCase().includes(q),
-    );
-  }, [history, historyQuery]);
-
-
   const isCombine = family.mode === "combine";
   const hasValid = items.some((i) => i.status.kind !== "rejected");
-  const isRunning = combineState.kind === "working" || items.some((i) => i.status.kind === "working");
+  const isRunning =
+    combineState.kind === "working" || items.some((i) => i.status.kind === "working");
   const anyDone = items.some((i) => i.status.kind === "done");
   const allDone =
     family.mode === "per-file" &&
@@ -569,8 +610,12 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
             <div className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
               {family.category}
             </div>
-            <DialogTitle className="text-2xl font-semibold tracking-tight">{family.title}</DialogTitle>
-            <DialogDescription className="text-muted-foreground">{family.description}</DialogDescription>
+            <DialogTitle className="text-2xl font-semibold tracking-tight">
+              {family.title}
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              {family.description}
+            </DialogDescription>
           </DialogHeader>
 
           {/* Format info + output picker */}
@@ -617,16 +662,22 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
                     </SelectContent>
                   </Select>
                   {selectedOutput && (
-                    <p className="mt-1 text-[11px] text-muted-foreground">{selectedOutput.description}</p>
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      {selectedOutput.description}
+                    </p>
                   )}
                 </div>
               ) : (
                 <div className="mt-1">
                   <div className="flex h-9 items-center rounded-md border border-foreground/15 bg-background px-3 text-sm">
-                    <span className="font-mono text-xs mr-2">.{family.outputExt.toLowerCase()}</span>
+                    <span className="font-mono text-xs mr-2">
+                      .{family.outputExt.toLowerCase()}
+                    </span>
                     {family.outputLabel}
                   </div>
-                  <p className="mt-1 text-[11px] text-muted-foreground">{family.outputDescription}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    {family.outputDescription}
+                  </p>
                 </div>
               )}
             </div>
@@ -641,8 +692,16 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
               >
                 Output filename
               </label>
-              <Select value={nameMode} onValueChange={(v) => setNameMode(v as NameMode)} disabled={isRunning}>
-                <SelectTrigger id="filename-mode" className="mt-1 h-9" aria-label="Output filename mode">
+              <Select
+                value={nameMode}
+                onValueChange={(v) => setNameMode(v as NameMode)}
+                disabled={isRunning}
+              >
+                <SelectTrigger
+                  id="filename-mode"
+                  className="mt-1 h-9"
+                  aria-label="Output filename mode"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -714,7 +773,13 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
                   ))}
                 </div>
               </div>
-              <p id="pdf-range-help" className={cn("mt-1 text-[11px]", pageRangeError ? "text-destructive" : "text-muted-foreground")}>
+              <p
+                id="pdf-range-help"
+                className={cn(
+                  "mt-1 text-[11px]",
+                  pageRangeError ? "text-destructive" : "text-muted-foreground",
+                )}
+              >
                 {pageRangeError ?? "Examples: all · first · 1-3,5,7-9"}
               </p>
             </div>
@@ -759,7 +824,9 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
           <div
             role="button"
             tabIndex={0}
-            aria-label={isCombine ? "Drop or select files to combine" : "Drop or select files to convert"}
+            aria-label={
+              isCombine ? "Drop or select files to combine" : "Drop or select files to convert"
+            }
             onDragOver={(e) => {
               e.preventDefault();
               setDragOver(true);
@@ -793,17 +860,25 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
                 e.target.value = "";
               }}
             />
-            <Upload className="h-7 w-7 text-foreground/70 transition-transform group-hover:-translate-y-0.5" aria-hidden />
+            <Upload
+              className="h-7 w-7 text-foreground/70 transition-transform group-hover:-translate-y-0.5"
+              aria-hidden
+            />
             <div className="space-y-0.5">
               <p className="text-sm font-medium">
                 {isCombine
-                  ? "Drop files here to combine — click to browse"
-                  : "Drop one or many files — click to browse"}
+                  ? "Drop files here to combine - click to browse"
+                  : "Drop one or many files - click to browse"}
               </p>
               <p className="text-xs text-muted-foreground">
                 {isCombine
                   ? "All files merged into a single output"
-                  : "Batch mode: each file converted independently"} · runs in your browser · press <kbd className="rounded border border-foreground/20 px-1 font-mono text-[10px]">Enter</kbd> to convert
+                  : "Batch mode: each file converted independently"}{" "}
+                · runs in your browser · press{" "}
+                <kbd className="rounded border border-foreground/20 px-1 font-mono text-[10px]">
+                  Enter
+                </kbd>{" "}
+                to convert
               </p>
             </div>
           </div>
@@ -834,7 +909,10 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
             </div>
           )}
           {zipState.kind === "error" && (
-            <div role="alert" className="rounded border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+            <div
+              role="alert"
+              className="rounded border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+            >
               ZIP failed: {zipState.message}
             </div>
           )}
@@ -842,11 +920,15 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
           {/* Combine state banner */}
           {family.mode === "combine" && combineState.kind === "working" && (
             <div className="flex items-center gap-2 rounded border border-foreground/15 bg-foreground/[0.04] px-3 py-2 text-sm">
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Processing {items.filter((i) => i.status.kind !== "rejected").length} files…
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Processing{" "}
+              {items.filter((i) => i.status.kind !== "rejected").length} files…
             </div>
           )}
           {family.mode === "combine" && combineState.kind === "error" && (
-            <div role="alert" className="flex items-start gap-2 rounded border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+            <div
+              role="alert"
+              className="flex items-start gap-2 rounded border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+            >
               <X className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
               <span className="break-words">{combineState.message}</span>
             </div>
@@ -860,7 +942,8 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
                 <div>
                   <p className="text-sm font-medium">Ready</p>
                   <p className="font-mono text-xs text-muted-foreground">
-                    {applyNameMode(combineState.filename, nameMode, nameSuffix)} · {formatSize(combineState.size)}
+                    {applyNameMode(combineState.filename, nameMode, nameSuffix)} ·{" "}
+                    {formatSize(combineState.size)}
                   </p>
                 </div>
               </div>
@@ -868,13 +951,23 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => setPreviewFor({ blob: combineState.blob, filename: applyNameMode(combineState.filename, nameMode, nameSuffix) })}
+                  onClick={() =>
+                    setPreviewFor({
+                      blob: combineState.blob,
+                      filename: applyNameMode(combineState.filename, nameMode, nameSuffix),
+                    })
+                  }
                 >
                   <Eye className="mr-2 h-4 w-4" aria-hidden /> Preview
                 </Button>
                 <Button
                   size="sm"
-                  onClick={() => triggerDownload(combineState.blob, applyNameMode(combineState.filename, nameMode, nameSuffix))}
+                  onClick={() =>
+                    triggerDownload(
+                      combineState.blob,
+                      applyNameMode(combineState.filename, nameMode, nameSuffix),
+                    )
+                  }
                 >
                   <Download className="mr-2 h-4 w-4" aria-hidden />
                   Download
@@ -899,7 +992,9 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <span className="truncate font-mono">{it.file.name}</span>
-                      <span className="shrink-0 text-muted-foreground">{formatSize(it.file.size)}</span>
+                      <span className="shrink-0 text-muted-foreground">
+                        {formatSize(it.file.size)}
+                      </span>
                     </div>
                     <StatusLabel
                       status={it.status}
@@ -931,7 +1026,10 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
                         type="button"
                         onClick={() =>
                           it.status.kind === "done" &&
-                          triggerDownload(it.status.blob, applyNameMode(it.status.filename, nameMode, nameSuffix))
+                          triggerDownload(
+                            it.status.blob,
+                            applyNameMode(it.status.filename, nameMode, nameSuffix),
+                          )
                         }
                         className="rounded p-1 text-muted-foreground hover:bg-foreground/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground"
                         aria-label={`Download ${it.file.name}`}
@@ -941,18 +1039,19 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
                       </button>
                     </>
                   )}
-                  {(it.status.kind === "error" || it.status.kind === "done") && family.mode === "per-file" && (
-                    <button
-                      type="button"
-                      onClick={() => convertOne(it)}
-                      disabled={isRunning}
-                      className="rounded p-1 text-muted-foreground hover:bg-foreground/5 hover:text-foreground disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground"
-                      aria-label={`Retry ${it.file.name}`}
-                      title="Retry"
-                    >
-                      <RotateCw className="h-3.5 w-3.5" aria-hidden />
-                    </button>
-                  )}
+                  {(it.status.kind === "error" || it.status.kind === "done") &&
+                    family.mode === "per-file" && (
+                      <button
+                        type="button"
+                        onClick={() => convertOne(it)}
+                        disabled={isRunning}
+                        className="rounded p-1 text-muted-foreground hover:bg-foreground/5 hover:text-foreground disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground"
+                        aria-label={`Retry ${it.file.name}`}
+                        title="Retry"
+                      >
+                        <RotateCw className="h-3.5 w-3.5" aria-hidden />
+                      </button>
+                    )}
                   {it.status.kind !== "working" && (
                     <button
                       type="button"
@@ -1005,11 +1104,19 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
                     <SelectItem value="subfolders">ZIP: per-input subfolders</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button variant="outline" onClick={downloadAllSeparate} disabled={zipState.kind === "working"}>
+                <Button
+                  variant="outline"
+                  onClick={downloadAllSeparate}
+                  disabled={zipState.kind === "working"}
+                >
                   <Download className="mr-2 h-4 w-4" aria-hidden />
                   Download separately
                 </Button>
-                <Button variant="outline" onClick={downloadAllZip} disabled={zipState.kind === "working"}>
+                <Button
+                  variant="outline"
+                  onClick={downloadAllZip}
+                  disabled={zipState.kind === "working"}
+                >
                   <Archive className="mr-2 h-4 w-4" aria-hidden />
                   {zipState.kind === "working" ? `Zipping ${zipState.percent}%` : "Download as ZIP"}
                 </Button>
@@ -1048,7 +1155,6 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
             )}
           </div>
 
-
           {/* History panel */}
           {showHistory && (
             <div
@@ -1063,11 +1169,14 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
                   <button
                     type="button"
                     onClick={() => {
-                      if (confirm("Clear all history for this converter? Stored outputs will be deleted.")) {
+                      if (
+                        confirm(
+                          "Clear all history for this converter? Stored outputs will be deleted.",
+                        )
+                      ) {
                         history.forEach((h) => removeEntry(h.id));
                       }
                     }}
-
                     className="flex items-center gap-1 rounded border border-foreground/15 px-2 py-0.5 text-[10px] font-mono uppercase tracking-widest text-muted-foreground hover:bg-foreground/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground"
                     aria-label="Clear history for this converter"
                   >
@@ -1078,7 +1187,10 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
               </div>
               {history.length > 0 && (
                 <div className="relative mb-2">
-                  <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                  <Search
+                    className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+                    aria-hidden
+                  />
                   <Input
                     value={historyQuery}
                     onChange={(e) => setHistoryQuery(e.target.value)}
@@ -1090,7 +1202,8 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
               )}
               {history.length === 0 ? (
                 <p className="text-xs text-muted-foreground">
-                  No history yet. Conversions you run here are saved locally so you can re-download or re-run with the same settings.
+                  No history yet. Conversions you run here are saved locally so you can re-download
+                  or re-run with the same settings.
                 </p>
               ) : filteredHistory.length === 0 ? (
                 <p className="text-xs text-muted-foreground">No entries match "{historyQuery}".</p>
@@ -1104,8 +1217,9 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-mono">{h.outputFilename}</p>
                         <p className="text-[10px] text-muted-foreground">
-                          from <span className="font-mono">{h.inputName}</span> · .{h.outputExt.toLowerCase()} ·{" "}
-                          {formatSize(h.outputSize)} · {new Date(h.timestamp).toLocaleString()}
+                          from <span className="font-mono">{h.inputName}</span> · .
+                          {h.outputExt.toLowerCase()} · {formatSize(h.outputSize)} ·{" "}
+                          {new Date(h.timestamp).toLocaleString()}
                           {h.pageRange && ` · pages ${h.pageRange}`}
                         </p>
                       </div>
@@ -1153,7 +1267,6 @@ export function ConverterDialog({ family, onClose, initialFiles }: Props) {
                   ))}
                 </ul>
               )}
-
             </div>
           )}
         </DialogContent>
@@ -1178,7 +1291,11 @@ function Thumb({ item }: { item: QueueItem }) {
   if (item.preview) {
     return (
       <div className={box}>
-        <img src={item.preview} alt={`Thumbnail of ${item.file.name}`} className="h-full w-full object-cover" />
+        <img
+          src={item.preview}
+          alt={`Thumbnail of ${item.file.name}`}
+          className="h-full w-full object-cover"
+        />
       </div>
     );
   }
@@ -1226,9 +1343,13 @@ function StatusLabel({ status, displayName }: { status: FileStatus; displayName?
         </p>
       );
     case "error":
-      return <p className={cn(base, "text-destructive normal-case tracking-normal")}>{status.message}</p>;
+      return (
+        <p className={cn(base, "text-destructive normal-case tracking-normal")}>{status.message}</p>
+      );
     case "rejected":
-      return <p className={cn(base, "text-destructive normal-case tracking-normal")}>{status.reason}</p>;
+      return (
+        <p className={cn(base, "text-destructive normal-case tracking-normal")}>{status.reason}</p>
+      );
   }
 }
 

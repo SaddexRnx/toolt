@@ -1,5 +1,6 @@
 // Lightweight previews for supported inputs (images and first page of PDFs).
 // Returns object URLs the caller must revoke.
+import { loadPdfjs } from "./pdfjs";
 
 const IMAGE_EXTS = ["JPG", "JPEG", "PNG", "WEBP", "GIF", "BMP", "AVIF", "TIFF", "TIF", "SVG"];
 
@@ -26,26 +27,30 @@ export async function makePreview(file: File): Promise<string | null> {
   }
   if (file.type === "application/pdf" || ext === "PDF") {
     try {
-      const pdfjs = await import("pdfjs-dist");
-      // Use bundled worker via Vite ?url import
-      const workerUrl = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
-      (pdfjs as unknown as { GlobalWorkerOptions: { workerSrc: string } }).GlobalWorkerOptions.workerSrc = workerUrl;
+      const pdfjs = await loadPdfjs();
       const buf = await file.arrayBuffer();
-      const doc = await pdfjs.getDocument({ data: new Uint8Array(buf) }).promise;
-      const page = await doc.getPage(1);
-      const viewport = page.getViewport({ scale: 1 });
-      const scale = Math.min(200 / viewport.width, 260 / viewport.height, 1.5);
-      const scaled = page.getViewport({ scale });
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.ceil(scaled.width);
-      canvas.height = Math.ceil(scaled.height);
-      const ctx = canvas.getContext("2d")!;
-      await page.render({ canvasContext: ctx, viewport: scaled, canvas }).promise;
-      const blob: Blob = await new Promise((resolve, reject) =>
-        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("preview encode failed"))), "image/png"),
-      );
-      await doc.cleanup();
-      return URL.createObjectURL(blob);
+      const task = pdfjs.getDocument({ data: new Uint8Array(buf) });
+      const doc = await task.promise;
+      try {
+        const page = await doc.getPage(1);
+        const viewport = page.getViewport({ scale: 1 });
+        const scale = Math.min(200 / viewport.width, 260 / viewport.height, 1.5);
+        const scaled = page.getViewport({ scale });
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.ceil(scaled.width);
+        canvas.height = Math.ceil(scaled.height);
+        const ctx = canvas.getContext("2d")!;
+        await page.render({ canvasContext: ctx, viewport: scaled, canvas }).promise;
+        const blob: Blob = await new Promise((resolve, reject) =>
+          canvas.toBlob(
+            (b) => (b ? resolve(b) : reject(new Error("preview encode failed"))),
+            "image/png",
+          ),
+        );
+        return URL.createObjectURL(blob);
+      } finally {
+        task.destroy();
+      }
     } catch {
       return null;
     }
@@ -54,36 +59,33 @@ export async function makePreview(file: File): Promise<string | null> {
 }
 
 /** Render up to `maxPages` pages of a PDF blob into PNG object URLs. */
-export async function renderPdfPages(
-  blob: Blob,
-  maxPages = 30,
-  scale = 1.25,
-): Promise<string[]> {
+export async function renderPdfPages(blob: Blob, maxPages = 30, scale = 1.25): Promise<string[]> {
   const urls: string[] = [];
   try {
-    const pdfjs = await import("pdfjs-dist");
-    const workerUrl = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
-    (pdfjs as unknown as { GlobalWorkerOptions: { workerSrc: string } }).GlobalWorkerOptions.workerSrc = workerUrl;
+    const pdfjs = await loadPdfjs();
     const buf = await blob.arrayBuffer();
-    const doc = await pdfjs.getDocument({ data: new Uint8Array(buf) }).promise;
-    const count = Math.min(doc.numPages, maxPages);
-    for (let i = 1; i <= count; i++) {
-      const page = await doc.getPage(i);
-      const viewport = page.getViewport({ scale });
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.ceil(viewport.width);
-      canvas.height = Math.ceil(viewport.height);
-      const ctx = canvas.getContext("2d")!;
-      await page.render({ canvasContext: ctx, viewport, canvas }).promise;
-      const pngBlob: Blob = await new Promise((resolve, reject) =>
-        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("encode failed"))), "image/png"),
-      );
-      urls.push(URL.createObjectURL(pngBlob));
+    const task = pdfjs.getDocument({ data: new Uint8Array(buf) });
+    const doc = await task.promise;
+    try {
+      const count = Math.min(doc.numPages, maxPages);
+      for (let i = 1; i <= count; i++) {
+        const page = await doc.getPage(i);
+        const viewport = page.getViewport({ scale });
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.ceil(viewport.width);
+        canvas.height = Math.ceil(viewport.height);
+        const ctx = canvas.getContext("2d")!;
+        await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+        const pngBlob: Blob = await new Promise((resolve, reject) =>
+          canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("encode failed"))), "image/png"),
+        );
+        urls.push(URL.createObjectURL(pngBlob));
+      }
+    } finally {
+      task.destroy();
     }
-    await doc.cleanup();
   } catch {
     // partial results returned if any
   }
   return urls;
 }
-

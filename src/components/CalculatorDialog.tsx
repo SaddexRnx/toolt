@@ -1,8 +1,20 @@
 import { useMemo, useState } from "react";
 import { Check, Copy } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { Calculator, CalcField } from "@/lib/calculators";
 
 type Props = { calc: Calculator | null; onClose: () => void };
@@ -14,18 +26,23 @@ export function CalculatorDialog({ calc, onClose }: Props) {
     for (const f of calc.fields) {
       if (f.type === "select") out[f.id] = f.default ?? f.options[0]?.value ?? "";
       else if (f.type === "number") out[f.id] = String(f.default ?? 0);
+      else if (f.type === "date")
+        out[f.id] = typeof f.default === "function" ? f.default() : (f.default ?? "");
       else out[f.id] = f.default ?? "";
     }
     return out;
   }, [calc]);
 
   const [values, setValues] = useState<Record<string, string>>(defaults);
-  const current = { ...defaults, ...values };
+  const current = useMemo(() => ({ ...defaults, ...values }), [defaults, values]);
 
   const results = useMemo(() => {
     if (!calc) return [];
-    try { return calc.compute(current); }
-    catch (e) { return [{ label: "Error", value: e instanceof Error ? e.message : "Failed to compute" }]; }
+    try {
+      return calc.compute(current);
+    } catch (e) {
+      return [{ label: "Error", value: e instanceof Error ? e.message : "Failed to compute" }];
+    }
   }, [calc, current]);
 
   if (!calc) return null;
@@ -43,15 +60,27 @@ export function CalculatorDialog({ calc, onClose }: Props) {
         <div className="grid gap-6 md:grid-cols-2">
           {/* Inputs */}
           <div className="space-y-4">
-            <div className="text-xs font-mono uppercase tracking-widest text-muted-foreground">Inputs</div>
+            <div className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
+              Inputs
+            </div>
             {calc.fields.map((f) => (
-              <FieldRow key={f.id} field={f} value={current[f.id] ?? ""} onChange={(v) => setVal(f.id, v)} />
+              <FieldRow
+                key={f.id}
+                field={f}
+                value={current[f.id] ?? ""}
+                onChange={(v) => setVal(f.id, v)}
+              />
             ))}
           </div>
 
           {/* Results */}
-          <div className="space-y-3 rounded-lg border border-foreground/10 bg-foreground/[0.02] p-5">
-            <div className="text-xs font-mono uppercase tracking-widest text-muted-foreground">Results</div>
+          <div
+            className="space-y-3 rounded-lg border border-foreground/10 bg-foreground/[0.02] p-5"
+            aria-live="polite"
+          >
+            <div className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
+              Results
+            </div>
             {results.map((r, i) => (
               <div key={i} className="space-y-2 border-b border-foreground/5 pb-2 last:border-0">
                 {r.preview ? (
@@ -59,8 +88,18 @@ export function CalculatorDialog({ calc, onClose }: Props) {
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm text-muted-foreground">{r.label}</span>
                       <span className="flex items-center gap-2 min-w-0">
-                        {r.value && <span className="truncate text-xs font-mono text-muted-foreground" title={r.value}>{r.value}</span>}
-                        <CopyButton text={styleToCss(r.value, r.preview.style)} label={`${r.label} CSS`} />
+                        {r.value && (
+                          <span
+                            className="truncate text-xs font-mono text-muted-foreground"
+                            title={r.value}
+                          >
+                            {r.value}
+                          </span>
+                        )}
+                        <CopyButton
+                          text={styleToCss(r.value, r.preview.style)}
+                          label={`${r.label} CSS`}
+                        />
                       </span>
                     </div>
                     <div
@@ -98,7 +137,7 @@ export function CalculatorDialog({ calc, onClose }: Props) {
                             justifyContent: "center",
                           }}
                         >
-                          {r.preview.text ?? ""}
+                          {r.preview.text || "Aa"}
                         </div>
                       )}
                     </div>
@@ -114,8 +153,12 @@ export function CalculatorDialog({ calc, onClose }: Props) {
                           style={{ backgroundColor: r.swatch }}
                         />
                       )}
-                      <span className="whitespace-pre-wrap text-left text-sm font-mono tabular-nums break-all">{r.value}</span>
-                      {r.hint && <span className="ml-1 text-xs text-muted-foreground">{r.hint}</span>}
+                      <span className="whitespace-pre-wrap text-left text-sm font-mono tabular-nums break-all">
+                        {r.value}
+                      </span>
+                      {r.hint && (
+                        <span className="ml-1 text-xs text-muted-foreground">{r.hint}</span>
+                      )}
                       <CopyButton text={r.value} label={r.label} />
                     </span>
                   </div>
@@ -127,7 +170,14 @@ export function CalculatorDialog({ calc, onClose }: Props) {
                         key={j}
                         type="button"
                         title={`Copy ${c}`}
-                        onClick={() => navigator.clipboard?.writeText(c)}
+                        aria-label={`Copy color ${c}`}
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(c);
+                          } catch {
+                            /* clipboard unavailable */
+                          }
+                        }}
                         className="h-8 w-8 rounded border border-foreground/20 transition hover:scale-110"
                         style={{ backgroundColor: c }}
                       />
@@ -144,7 +194,15 @@ export function CalculatorDialog({ calc, onClose }: Props) {
   );
 }
 
-function FieldRow({ field, value, onChange }: { field: CalcField; value: string; onChange: (v: string) => void }) {
+function FieldRow({
+  field,
+  value,
+  onChange,
+}: {
+  field: CalcField;
+  value: string;
+  onChange: (v: string) => void;
+}) {
   const unit = "unit" in field && field.unit ? field.unit : null;
   return (
     <label className="block text-sm">
@@ -154,9 +212,15 @@ function FieldRow({ field, value, onChange }: { field: CalcField; value: string;
       </span>
       {field.type === "select" ? (
         <Select value={value} onValueChange={onChange}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
-            {field.options.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+            {field.options.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       ) : field.type === "textarea" ? (
@@ -170,9 +234,22 @@ function FieldRow({ field, value, onChange }: { field: CalcField; value: string;
       ) : field.type === "date" ? (
         <Input type="date" value={value} onChange={(e) => onChange(e.target.value)} />
       ) : field.type === "number" ? (
-        <Input type="number" value={value} min={field.min} max={field.max} step={field.step} placeholder={field.placeholder} onChange={(e) => onChange(e.target.value)} />
+        <Input
+          type="number"
+          value={value}
+          min={field.min}
+          max={field.max}
+          step={field.step}
+          placeholder={field.placeholder}
+          onChange={(e) => onChange(e.target.value)}
+        />
       ) : (
-        <Input type="text" value={value} placeholder={field.placeholder} onChange={(e) => onChange(e.target.value)} />
+        <Input
+          type="text"
+          value={value}
+          placeholder={field.placeholder}
+          onChange={(e) => onChange(e.target.value)}
+        />
       )}
     </label>
   );

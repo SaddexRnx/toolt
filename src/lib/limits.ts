@@ -18,17 +18,18 @@
  * mobile browsers responsive.
  */
 export const DEFAULT_SIZE_LIMITS: Record<string, number> = {
-  PDF: 200 * 1024 * 1024,        // 200 MB
-  Images: 50 * 1024 * 1024,      // 50 MB
-  Video: 500 * 1024 * 1024,      // 500 MB
-  Audio: 200 * 1024 * 1024,      // 200 MB
-  Documents: 25 * 1024 * 1024,   // 25 MB
-  Data: 50 * 1024 * 1024,        // 50 MB
-  AI: 20 * 1024 * 1024,          // 20 MB — models are heavy, keep input tight
-  Encoding: 10 * 1024 * 1024,    // 10 MB
-  Text: 10 * 1024 * 1024,        // 10 MB
-  Code: 5 * 1024 * 1024,         // 5 MB
-  Config: 5 * 1024 * 1024,       // 5 MB
+  PDF: 200 * 1024 * 1024, // 200 MB
+  Images: 50 * 1024 * 1024, // 50 MB
+  Video: 500 * 1024 * 1024, // 500 MB
+  Audio: 200 * 1024 * 1024, // 200 MB
+  Documents: 25 * 1024 * 1024, // 25 MB
+  Data: 50 * 1024 * 1024, // 50 MB
+  Spreadsheets: 50 * 1024 * 1024, // 50 MB
+  Vision: 20 * 1024 * 1024, // 20 MB - models are heavy, keep input tight
+  Encoders: 10 * 1024 * 1024, // 10 MB
+  Text: 10 * 1024 * 1024, // 10 MB
+  Developer: 5 * 1024 * 1024, // 5 MB
+  Archives: 100 * 1024 * 1024, // 100 MB
 };
 
 export const HARD_MAX_SIZE = 2 * 1024 * 1024 * 1024; // 2 GB absolute ceiling
@@ -40,7 +41,7 @@ export function limitForFamily(opts: {
 }): number {
   if (opts.override) return Math.min(opts.override, HARD_MAX_SIZE);
   const perTool: Record<string, number> = {
-    // Tools that are exceptionally memory-heavy — tighten the default.
+    // Tools that are exceptionally memory-heavy - tighten the default.
     "remove-bg": 15 * 1024 * 1024,
     "ocr-image": 15 * 1024 * 1024,
     "ocr-pdf": 50 * 1024 * 1024,
@@ -58,8 +59,11 @@ export function formatBytes(bytes: number): string {
 }
 
 export class FileTooLargeError extends Error {
-  constructor(public readonly size: number, public readonly limit: number) {
-    super(`File is ${formatBytes(size)} — this tool accepts up to ${formatBytes(limit)}.`);
+  constructor(
+    public readonly size: number,
+    public readonly limit: number,
+  ) {
+    super(`File is ${formatBytes(size)} - this tool accepts up to ${formatBytes(limit)}.`);
     this.name = "FileTooLargeError";
   }
 }
@@ -113,32 +117,37 @@ function getSlot(key: string, max: number): Slot {
  * into ffmpeg.wasm / tesseract / bg-removal so a bulk queue doesn't spawn
  * 20 engines at once and OOM the tab.
  */
-export function withConcurrency<T>(
-  key: string,
-  max: number,
-  fn: () => Promise<T>,
-): Promise<T> {
+export function withConcurrency<T>(key: string, max: number, fn: () => Promise<T>): Promise<T> {
   const slot = getSlot(key, max);
   return new Promise<T>((resolve, reject) => {
+    const release = () => {
+      slot.active--;
+      const next = slot.queue.shift();
+      if (next) next();
+    };
     const attempt = () => {
       if (slot.active >= slot.max) {
         slot.queue.push(attempt);
         return;
       }
       slot.active++;
-      fn()
-        .then(resolve, reject)
-        .finally(() => {
-          slot.active--;
-          const next = slot.queue.shift();
-          if (next) next();
-        });
+      let result: Promise<T>;
+      try {
+        result = fn();
+      } catch (error) {
+        // A synchronous throw must still free the slot, otherwise the queue
+        // stalls forever and every later caller waits on a dead promise.
+        release();
+        reject(error);
+        return;
+      }
+      result.then(resolve, reject).finally(release);
     };
     attempt();
   });
 }
 
-// Well-known keys — keep in one place so callers can't drift.
+// Well-known keys - keep in one place so callers can't drift.
 export const LIMITS = {
   ffmpeg: { key: "ffmpeg", max: 1, cooldownMs: 300 },
   tesseract: { key: "tesseract", max: 1, cooldownMs: 300 },
