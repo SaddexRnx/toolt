@@ -13,7 +13,7 @@ import { calculators, type Calculator } from "@/lib/calculators";
 import { ConverterDialog } from "@/components/ConverterDialog";
 import { SmartDropZone } from "@/components/SmartDropZone";
 import { TopBarControls } from "@/components/TopBarControls";
-import { useT } from "@/lib/i18n";
+import { useCategoryLabel, useT } from "@/lib/i18n";
 import { siteUrl } from "@/lib/site";
 
 const HOME_URL = siteUrl("/");
@@ -82,6 +82,7 @@ export const Route = createFileRoute("/")({
 
 function Home() {
   const t = useT();
+  const categoryLabel = useCategoryLabel();
   const [active, setActive] = useState<Family | null>(null);
   const [initialFiles, setInitialFiles] = useState<File[] | null>(null);
   const [category, setCategory] = useState<string>("All");
@@ -308,7 +309,7 @@ function Home() {
                     cat === "All"
                       ? total
                       : (mergedGroups.find((g) => g.title === cat)?.items.length ?? 0);
-                  const label = cat === "All" ? t("catalog.category.all") : cat;
+                  const label = categoryLabel(cat);
                   return (
                     <button
                       key={cat}
@@ -322,7 +323,7 @@ function Home() {
                     >
                       {label}
                       <span
-                        className={`ml-1.5 font-mono text-[10px] ${isActive ? "opacity-70" : "opacity-50"}`}
+                        className={`ms-1.5 font-mono text-[10px] ${isActive ? "opacity-70" : "opacity-50"}`}
                       >
                         {count}
                       </span>
@@ -332,14 +333,14 @@ function Home() {
               </div>
 
               <div className="relative w-full md:w-72">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 opacity-50" />
+                <Search className="pointer-events-none absolute start-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 opacity-50" />
                 <input
                   type="search"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder={t("catalog.search.placeholder")}
                   aria-label={t("catalog.search.placeholder")}
-                  className="w-full rounded-full border border-foreground/15 bg-background py-1.5 pl-9 pr-3 text-sm outline-none focus:border-foreground"
+                  className="w-full rounded-full border border-foreground/15 bg-background py-1.5 ps-9 pe-3 text-sm outline-none focus:border-foreground"
                 />
               </div>
             </div>
@@ -353,7 +354,7 @@ function Home() {
             filteredGroups.map((group) => (
               <div key={group.title} className="mb-16">
                 <div className="mb-6 flex items-baseline justify-between border-b border-foreground/10 pb-3">
-                  <h3 className="text-lg font-semibold tracking-tight">{group.title}</h3>
+                  <h3 className="text-lg font-semibold tracking-tight">{categoryLabel(group.title)}</h3>
                   <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
                     {t("catalog.tools.count", { n: group.items.length })}
                   </span>
@@ -368,7 +369,7 @@ function Home() {
                           key={`calc-${c.id}`}
                           to="/tools/$id"
                           params={{ id: c.id }}
-                          className="tool-card group flex flex-col justify-between gap-6 bg-background p-6 text-left"
+                          className="tool-card group flex flex-col justify-between gap-6 bg-background p-6 text-start"
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
@@ -398,7 +399,7 @@ function Home() {
                         key={f.id}
                         to="/tools/$id"
                         params={{ id: f.id }}
-                        className="tool-card group flex flex-col justify-between gap-6 bg-background p-6 text-left"
+                        className="tool-card group flex flex-col justify-between gap-6 bg-background p-6 text-start"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex flex-wrap items-center gap-1 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">

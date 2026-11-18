@@ -127,7 +127,24 @@ const NO_FLASH = `(() => { try {
   else t = t === 'light' ? 'light' : 'dark';
   if (t === 'dark') document.documentElement.classList.add('dark');
   var l = localStorage.getItem('toolt.lang');
-  if (l) { document.documentElement.lang = l; if (l === 'ar' || l === 'he' || l === 'fa') document.documentElement.dir = 'rtl'; }
+  var supported = ['en','es','fr','de','it','pt','nl','ru','zh','ja','ko','ar','tr','pl','hi','vi','id','uk','sv','cs','he'];
+  if (!l || supported.indexOf(l) < 0) {
+    var n = (navigator.language || 'en').slice(0, 2).toLowerCase();
+    l = supported.indexOf(n) >= 0 ? n : '';
+  }
+  if (l) {
+    document.documentElement.lang = l;
+    document.documentElement.setAttribute('data-boot-lang', l);
+    if (l === 'ar' || l === 'he' || l === 'fa') document.documentElement.dir = 'rtl';
+    // The server renders English. Until React has swapped in the saved
+    // locale, keep the body hidden so the wrong language never flashes.
+    if (l !== 'en') {
+      document.documentElement.classList.add('i18n-boot');
+      setTimeout(function () {
+        document.documentElement.classList.remove('i18n-boot');
+      }, 3000);
+    }
+  }
 } catch(e){} })();`;
 
 function RootShell({ children }: { children: ReactNode }) {

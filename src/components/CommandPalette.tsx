@@ -2,13 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Calculator as CalcIcon, CornerDownLeft, Search } from "lucide-react";
 import { catalog, type CatalogTool } from "@/lib/catalog";
-import { useT } from "@/lib/i18n";
+import { useCategoryLabel, useT } from "@/lib/i18n";
 
 const MAX_RESULTS = 40;
 
 export function CommandPalette() {
   const navigate = useNavigate();
   const t = useT();
+  const categoryLabel = useCategoryLabel();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIdx, setActiveIdx] = useState(0);
@@ -122,7 +123,7 @@ export function CommandPalette() {
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Search tools"
+        aria-label={t("ui.search")}
         className="w-full max-w-xl overflow-hidden rounded-lg border border-foreground/15 bg-background shadow-2xl"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={onKeyDown}
@@ -134,7 +135,7 @@ export function CommandPalette() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t("palette.placeholder")}
-            aria-label="Search tools"
+            aria-label={t("ui.search")}
             aria-controls="palette-results"
             aria-activedescendant={results[activeIdx] ? `palette-${results[activeIdx].id}` : undefined}
             className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
@@ -148,7 +149,7 @@ export function CommandPalette() {
           ref={listRef}
           id="palette-results"
           role="listbox"
-          aria-label="Tools"
+          aria-label={t("catalog.title")}
           className="max-h-[50vh] overflow-y-auto py-1"
         >
           {results.length === 0 ? (
@@ -168,14 +169,14 @@ export function CommandPalette() {
                   aria-selected={active}
                   onMouseMove={() => setActiveIdx(i)}
                   onClick={() => go(tool)}
-                  className={`flex w-full items-center justify-between gap-3 px-4 py-2 text-left text-sm transition-colors ${
+                  className={`flex w-full items-center justify-between gap-3 px-4 py-2 text-start text-sm transition-colors ${
                     active ? "bg-foreground/[0.06]" : ""
                   }`}
                 >
                   <span className="min-w-0">
                     <span className="block truncate font-medium">{tool.title}</span>
                     <span className="block truncate font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                      {tool.category}
+                      {categoryLabel(tool.category)}
                     </span>
                   </span>
                   <span className="flex shrink-0 items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
@@ -189,7 +190,7 @@ export function CommandPalette() {
         </div>
 
         <p className="border-t border-foreground/10 px-4 py-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-          {t("palette.hint")} · {catalog.length} tools
+          {t("palette.hint")} · {t("palette.count", { n: catalog.length })}
         </p>
       </div>
     </div>

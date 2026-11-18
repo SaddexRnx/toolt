@@ -5,7 +5,7 @@ import { relatedTools, toolById } from "@/lib/catalog";
 import { ConverterDialog } from "@/components/ConverterDialog";
 import { CalculatorDialog } from "@/components/CalculatorDialog";
 import { TopBarControls } from "@/components/TopBarControls";
-import { useT } from "@/lib/i18n";
+import { useCategoryLabel, useT } from "@/lib/i18n";
 import { siteUrl } from "@/lib/site";
 
 const BASE_URL = siteUrl("/").replace(/\/$/, "");
@@ -48,6 +48,7 @@ export const Route = createFileRoute("/tools/$id")({
 function ToolPage() {
   const { id } = Route.useParams();
   const t = useT();
+  const categoryLabel = useCategoryLabel();
   const tool = useMemo(() => toolById(id), [id]);
   const relatives = useMemo(() => (tool ? relatedTools(tool) : []), [tool]);
   // Opening a tool page starts the tool immediately; closing the dialog reveals
@@ -70,7 +71,7 @@ function ToolPage() {
           to="/"
           className="inline-flex items-center gap-1.5 rounded-full border border-foreground/15 px-3 py-1.5 text-xs transition-colors hover:border-foreground/40"
         >
-          <ArrowLeft className="h-3.5 w-3.5" /> {t("tool.back")}
+          <ArrowLeft className="h-3.5 w-3.5 rtl:-scale-x-100" /> {t("tool.back")}
         </Link>
       </div>
     );
@@ -83,7 +84,7 @@ function ToolPage() {
           <Link to="/" className="flex items-center gap-2">
             <img src="/favicon.png" alt="To_olT logo" className="h-6 w-6 dark:invert" />
             <span className="text-sm font-semibold tracking-tight">To_olT</span>
-            <span className="brand-dot-sm ml-1" aria-hidden />
+            <span className="brand-dot-sm ms-1" aria-hidden />
           </Link>
           <div className="flex items-center gap-3">
             <TopBarControls />
@@ -96,11 +97,13 @@ function ToolPage() {
           to="/"
           className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground transition-colors hover:text-foreground"
         >
-          <ArrowLeft className="h-3 w-3" /> {t("tool.back")}
+          <ArrowLeft className="h-3 w-3 rtl:-scale-x-100" /> {t("tool.back")}
         </Link>
 
         <div className="mt-6 flex flex-wrap items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-          <span className="rounded border border-foreground/20 px-1.5 py-0.5">{tool.category}</span>
+          <span className="rounded border border-foreground/20 px-1.5 py-0.5">
+            {categoryLabel(tool.category)}
+          </span>
           {tool.kind === "calculator" && (
             <span className="flex items-center gap-1 rounded border border-foreground/20 px-1.5 py-0.5">
               <CalcIcon className="h-3 w-3" /> {t("catalog.interactive")}
@@ -161,7 +164,7 @@ function ToolPage() {
                   key={r.id}
                   to="/tools/$id"
                   params={{ id: r.id }}
-                  className="group flex items-center justify-between gap-4 bg-background p-4 text-left transition-colors hover:bg-foreground/[0.03]"
+                  className="group flex items-center justify-between gap-4 bg-background p-4 text-start transition-colors hover:bg-foreground/[0.03]"
                 >
                   <span>
                     <span className="block text-sm font-medium">{r.title}</span>

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Upload, X, ArrowRight, FileIcon, Search } from "lucide-react";
 import { families, type Family } from "@/lib/converters";
-import { useT } from "@/lib/i18n";
+import { useCategoryLabel, useT } from "@/lib/i18n";
 
 const getExt = (name: string) => {
   const m = name.match(/\.([^.]+)$/);
@@ -15,6 +15,7 @@ type Props = {
 
 export function SmartDropZone({ onPick, onHide }: Props) {
   const t = useT();
+  const categoryLabel = useCategoryLabel();
   const [files, setFiles] = useState<File[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [query, setQuery] = useState("");
@@ -146,9 +147,7 @@ export function SmartDropZone({ onPick, onHide }: Props) {
             <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs sm:text-sm">
               <FileIcon className="h-4 w-4 shrink-0 opacity-60" />
               <span className="font-medium">
-                {files.length === 1
-                  ? t("smart.files", { n: files.length })
-                  : t("smart.files.plural", { n: files.length })}
+                {t("smart.files", { n: files.length })}
               </span>
               <span className="hidden text-muted-foreground sm:inline">·</span>
               <div className="flex flex-wrap gap-1 font-mono text-[10px] uppercase tracking-widest">
@@ -163,9 +162,7 @@ export function SmartDropZone({ onPick, onHide }: Props) {
               </div>
               <span className="hidden text-muted-foreground sm:inline">·</span>
               <span className="w-full text-muted-foreground sm:w-auto">
-                {matches.length === 1
-                  ? t("smart.matching", { n: matches.length })
-                  : t("smart.matching.plural", { n: matches.length })}
+                {t("smart.matching", { n: matches.length })}
               </span>
             </div>
             <div className="flex shrink-0 items-center gap-2">
@@ -200,15 +197,15 @@ export function SmartDropZone({ onPick, onHide }: Props) {
           ) : (
             <div className="grid md:grid-cols-[200px_1fr]">
               {/* Category rail */}
-              <div className="flex gap-1 overflow-x-auto border-b border-foreground/10 p-2 md:flex-col md:overflow-visible md:border-b-0 md:border-r">
+              <div className="flex gap-1 overflow-x-auto border-b border-foreground/10 p-2 md:flex-col md:overflow-visible md:border-b-0 md:border-e">
                 {categories.map(([cat, count]) => {
                   const active = cat === activeCat;
-                  const label = cat === "All" ? t("catalog.category.all") : cat;
+                  const label = categoryLabel(cat);
                   return (
                     <button
                       key={cat}
                       onClick={() => setActiveCat(cat)}
-                      className={`flex shrink-0 items-center justify-between gap-3 rounded px-3 py-1.5 text-left text-xs transition-colors md:text-sm ${
+                      className={`flex shrink-0 items-center justify-between gap-3 rounded px-3 py-1.5 text-start text-xs transition-colors md:text-sm ${
                         active
                           ? "bg-foreground text-background"
                           : "text-foreground/70 hover:bg-foreground/5 hover:text-foreground"
@@ -228,13 +225,13 @@ export function SmartDropZone({ onPick, onHide }: Props) {
               {/* Results list */}
               <div className="flex min-w-0 flex-col">
                 <div className="relative border-b border-foreground/10 p-2">
-                  <Search className="pointer-events-none absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 opacity-50" />
+                  <Search className="pointer-events-none absolute start-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 opacity-50" />
                   <input
                     type="search"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder={t("smart.filter.placeholder")}
-                    className="w-full rounded border border-transparent bg-transparent py-1.5 pl-8 pr-3 text-sm outline-none focus:border-foreground/20"
+                    className="w-full rounded border border-transparent bg-transparent py-1.5 ps-8 pe-3 text-sm outline-none focus:border-foreground/20"
                   />
                 </div>
                 <div className="max-h-[60vh] overflow-y-auto md:max-h-[420px]">

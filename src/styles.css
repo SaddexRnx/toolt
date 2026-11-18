@@ -237,3 +237,25 @@
     transition: none;
   }
 }
+
+/*
+ * Arabic and Hebrew are cursive scripts: letter-spacing breaks the joins and
+ * makes words look corrupted. Tracked labels are for Latin/numeric chrome
+ * only, so neutralise them whenever the document is right-to-left.
+ */
+[dir="rtl"] .tracking-wide,
+[dir="rtl"] .tracking-wider,
+[dir="rtl"] .tracking-widest {
+  letter-spacing: 0;
+}
+
+/*
+ * The server renders English so hydration is deterministic. When a visitor
+ * has a non-English language saved, the inline head script adds this class
+ * and React removes it after switching to the right locale. Hiding the body
+ * for that one tick prevents a flash of English and an LTR -> RTL reflow.
+ * The script also removes the class after 3s in case hydration never runs.
+ */
+html.i18n-boot body {
+  visibility: hidden;
+}

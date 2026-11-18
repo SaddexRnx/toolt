@@ -114,7 +114,7 @@ export function TopBarControls() {
             aria-label={t("ui.language")}
             aria-activedescendant={`lang-opt-${LANGUAGES[activeIdx]?.code}`}
             onKeyDown={onKeyDownList}
-            className="absolute right-0 z-50 mt-2 max-h-80 w-48 overflow-auto rounded-md border border-foreground/15 bg-background py-1 text-sm shadow-lg outline-none"
+            className="absolute end-0 z-50 mt-2 max-h-80 w-48 overflow-auto rounded-md border border-foreground/15 bg-background py-1 text-sm shadow-lg outline-none"
           >
             {LANGUAGES.map((l, i) => {
               const active = l.code === lang;
@@ -131,13 +131,13 @@ export function TopBarControls() {
                       setOpen(false);
                       btnRef.current?.focus();
                     }}
-                    className={`flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left transition-colors hover:bg-foreground/5 focus-visible:bg-foreground/5 ${
+                    className={`flex w-full items-center justify-between gap-2 px-3 py-1.5 text-start transition-colors hover:bg-foreground/5 focus-visible:bg-foreground/5 ${
                       active ? "text-foreground" : "text-foreground/70"
                     }`}
                   >
                     <span>
                       <span className="font-medium">{l.native}</span>
-                      <span className="ml-2 text-xs text-muted-foreground">{l.label}</span>
+                      <span className="ms-2 text-xs text-muted-foreground">{l.label}</span>
                     </span>
                     {active && <Check className="h-3.5 w-3.5" />}
                   </button>
