@@ -7,6 +7,7 @@
 175 tools for PDFs, images, video, audio, documents, data, code and design — all running inside your browser.
 
 <p>
+  <a href="https://toolt.sdxrnx.workers.dev"><img alt="Live demo" src="https://img.shields.io/badge/live-demo-22c55e?style=for-the-badge&logo=cloudflare&logoColor=white" /></a>
   <img alt="175 tools" src="https://img.shields.io/badge/tools-175-22c55e?style=for-the-badge" />
   <img alt="100% client-side" src="https://img.shields.io/badge/client--side-100%25-black?style=for-the-badge" />
   <img alt="21 languages" src="https://img.shields.io/badge/languages-21-22c55e?style=for-the-badge" />
@@ -21,7 +22,7 @@
   <img alt="Cloudflare Workers" src="https://img.shields.io/badge/Cloudflare-Workers-F38020?style=flat-square&logo=cloudflare&logoColor=white" />
 </p>
 
-[GitHub](https://github.com/SaddexRnx/toolt) · [Why To_olT](#why-to_olt) · [How it compares](#how-it-compares) · [Tool catalog](#tool-catalog) · [Architecture](#architecture) · [Quick start](#quick-start) · [Deploy](#deploy)
+[Live demo](https://toolt.sdxrnx.workers.dev) · [GitHub](https://github.com/SaddexRnx/toolt) · [Why To_olT](#why-to_olt) · [How it compares](#how-it-compares) · [Tool catalog](#tool-catalog) · [Architecture](#architecture) · [Quick start](#quick-start) · [Deploy](#deploy)
 
 </div>
 
@@ -152,26 +153,9 @@ Every tool has a real URL (`/tools/<id>`), its own title, description, canonical
 
 The entire app is a static front-end plus a thin SSR shell. Heavy work is isolated behind dynamic imports, so the initial page never pays for an engine it does not use.
 
-```mermaid
-flowchart LR
-  A["Drop, paste or pick"] --> B["Tool registry / catalog.ts"]
-  B --> C{"Engine router"}
-  C -->|PDF| D["pdf-lib / pdf.js"]
-  C -->|Images| E["Canvas / heic2any / compression"]
-  C -->|Media| F["ffmpeg.wasm"]
-  C -->|Vision| G["tesseract.js / background removal"]
-  C -->|Docs| H["SheetJS / mammoth / Papa Parse"]
-  C -->|Interactive| I["TypeScript calculators"]
-  D --> J["Preview / batch queue / retry / rename"]
-  E --> J
-  F --> J
-  G --> J
-  H --> J
-  I --> J
-  J --> K["IndexedDB history"]
-  J --> L["Download / ZIP export"]
-  L --> M["Stays on your device"]
-```
+<p align="center">
+  <img src="docs/architecture.svg" alt="To_olT architecture: input flows through the tool registry and engine router to PDF, image, media, vision, document and calculator engines, then through a shared preview and batch pipeline to local history and download." width="100%" />
+</p>
 
 ### Stack
 
@@ -238,19 +222,16 @@ Open <http://localhost:8080>.
 
 ## Deploy
 
-The build targets Cloudflare Workers through Nitro. Copy `.env.example` to `.env`, set your public origin, then build and deploy:
+The app is live at **<https://toolt.sdxrnx.workers.dev>**, served by the `toolt` Worker on Cloudflare.
+
+Production builds target that origin for canonical links, Open Graph tags, JSON-LD and the sitemap. To move to a custom domain, set `VITE_SITE_URL` in the build environment and attach the domain to the Worker.
 
 ```bash
-cp .env.example .env
-# Edit .env and set VITE_SITE_URL=https://your-domain.example
-
 bun run build
 bunx wrangler deploy
 ```
 
-`VITE_SITE_URL` is used for canonical links, Open Graph tags, JSON-LD and the sitemap. Without it those absolute URLs fall back to the local dev origin, so set it before a production build.
-
-Preview the Worker locally:
+Preview the production build locally:
 
 ```bash
 bun run preview   # wrangler dev

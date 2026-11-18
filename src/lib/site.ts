@@ -1,16 +1,25 @@
 /**
  * Canonical origin of the deployed app.
  *
- * Set `VITE_SITE_URL` when building for production, for example:
+ * Production builds default to the live Cloudflare Worker. Set
+ * `VITE_SITE_URL` only when deploying to a custom domain.
  *
- *   VITE_SITE_URL=https://toolt.example.com bun run build
- *
- * Without it the app still works; only absolute SEO URLs (canonical links,
- * Open Graph, JSON-LD and the sitemap) fall back to the local dev origin.
+ * A stale `VITE_SITE_URL=http://localhost:8080` in a hosting provider's
+ * build settings is ignored in production so it cannot leak into canonical
+ * links, Open Graph tags, JSON-LD or the sitemap.
  */
-const configured = (import.meta.env.VITE_SITE_URL as string | undefined)?.trim();
+const DEV_URL = "http://localhost:8080";
+const PRODUCTION_URL = "https://toolt.sdxrnx.workers.dev";
 
-export const SITE_URL = (configured || "http://localhost:8080").replace(/\/+$/, "");
+const configured = (import.meta.env.VITE_SITE_URL as string | undefined)?.trim();
+const pointsAtLocalhost = configured
+  ? /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?\/?$/i.test(configured)
+  : false;
+
+const fallback = import.meta.env.DEV ? DEV_URL : PRODUCTION_URL;
+const origin = configured && !(import.meta.env.PROD && pointsAtLocalhost) ? configured : fallback;
+
+export const SITE_URL = origin.replace(/\/+$/, "");
 
 export function siteUrl(path = "/"): string {
   return `${SITE_URL}${path.startsWith("/") ? path : `/${path}`}`;

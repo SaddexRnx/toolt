@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" width="1200" height="700" role="img" aria-labelledby="arch-title arch-desc">
+  <title id="arch-title">To_olT architecture</title>
+  <desc id="arch-desc">Files enter through the tool registry and engine router, run through PDF, image, media, vision, document or calculator engines, then pass through a shared preview and batch pipeline to local history and download. Everything stays in the browser.</desc>
+
+  <defs>
+    <style>
+      .heading { font: 600 30px ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; fill: #f8fafc; }
+      .title { font: 600 22px ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; fill: #f8fafc; }
+      .sub { font: 400 15px ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; fill: #94a3b8; }
+      .mono { font: 500 15px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #94a3b8; }
+      .node { fill: #111827; stroke: #263449; stroke-width: 1.5; }
+      .engine { fill: #0d1526; stroke: #223046; stroke-width: 1.5; }
+      .accent { fill: #0f1d16; stroke: #22c55e; stroke-width: 2; }
+      .link { fill: none; stroke: #475569; stroke-width: 2; }
+      .link-green { fill: none; stroke: #22c55e; stroke-width: 2; }
+      .dot { fill: #22c55e; }
+      .green { fill: #4ade80; }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b" />
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#22c55e" />
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1200" height="700" rx="18" fill="#0b0f14" stroke="#1f2937" />
+
+  <text x="30" y="48" class="heading">To_olT architecture</text>
+  <text x="30" y="74" class="sub">Every engine runs on your device. Nothing is uploaded.</text>
+
+  <!-- Input -->
+  <rect x="30" y="280" width="170" height="86" rx="12" class="node" />
+  <text x="115" y="314" text-anchor="middle" class="title">Input</text>
+  <text x="115" y="338" text-anchor="middle" class="sub">Drop / paste / pick</text>
+
+  <!-- Registry -->
+  <rect x="240" y="280" width="180" height="86" rx="12" class="node" />
+  <text x="330" y="314" text-anchor="middle" class="title">Tool registry</text>
+  <text x="330" y="338" text-anchor="middle" class="mono">catalog.ts</text>
+
+  <!-- Router -->
+  <polygon points="540,245 640,323 540,401 440,323" class="accent" />
+  <text x="540" y="329" text-anchor="middle" class="title">Engine router</text>
+
+  <!-- Engine cards -->
+  <g>
+    <rect x="680" y="40" width="230" height="60" rx="12" class="engine" />
+    <circle cx="698" cy="60" r="3" class="dot" />
+    <text x="712" y="64" class="title">PDF</text>
+    <text x="712" y="84" class="sub">pdf-lib + pdf.js</text>
+
+    <rect x="680" y="136" width="230" height="60" rx="12" class="engine" />
+    <circle cx="698" cy="156" r="3" class="dot" />
+    <text x="712" y="160" class="title">Images</text>
+    <text x="712" y="180" class="sub">Canvas + heic2any</text>
+
+    <rect x="680" y="232" width="230" height="60" rx="12" class="engine" />
+    <circle cx="698" cy="252" r="3" class="dot" />
+    <text x="712" y="256" class="title">Media</text>
+    <text x="712" y="276" class="sub">ffmpeg.wasm</text>
+
+    <rect x="680" y="328" width="230" height="60" rx="12" class="engine" />
+    <circle cx="698" cy="348" r="3" class="dot" />
+    <text x="712" y="352" class="title">Vision</text>
+    <text x="712" y="372" class="sub">Tesseract + imgly</text>
+
+    <rect x="680" y="424" width="230" height="60" rx="12" class="engine" />
+    <circle cx="698" cy="444" r="3" class="dot" />
+    <text x="712" y="448" class="title">Docs &amp; data</text>
+    <text x="712" y="468" class="sub">SheetJS + mammoth</text>
+
+    <rect x="680" y="520" width="230" height="60" rx="12" class="engine" />
+    <circle cx="698" cy="540" r="3" class="dot" />
+    <text x="712" y="544" class="title">Interactive</text>
+    <text x="712" y="564" class="sub">TypeScript calculators</text>
+  </g>
+
+  <!-- Left to right flow -->
+  <path d="M200 323 H236" class="link" marker-end="url(#arrow)" />
+  <path d="M420 323 H436" class="link" marker-end="url(#arrow)" />
+
+  <!-- Router to the engine bus -->
+  <path d="M640 323 H655" class="link" />
+  <path d="M655 70 V550" class="link" />
+  <path d="M655 70 H676" class="link" marker-end="url(#arrow)" />
+  <path d="M655 166 H676" class="link" marker-end="url(#arrow)" />
+  <path d="M655 262 H676" class="link" marker-end="url(#arrow)" />
+  <path d="M655 358 H676" class="link" marker-end="url(#arrow)" />
+  <path d="M655 454 H676" class="link" marker-end="url(#arrow)" />
+  <path d="M655 550 H676" class="link" marker-end="url(#arrow)" />
+
+  <!-- Engine bus to the shared pipeline -->
+  <path d="M910 70 H930" class="link" />
+  <path d="M910 166 H930" class="link" />
+  <path d="M910 262 H930" class="link" />
+  <path d="M910 358 H930" class="link" />
+  <path d="M910 454 H930" class="link" />
+  <path d="M910 550 H930" class="link" />
+  <path d="M930 70 V550" class="link" />
+  <path d="M930 323 H946" class="link" marker-end="url(#arrow)" />
+
+  <!-- Shared pipeline -->
+  <rect x="950" y="263" width="220" height="100" rx="12" class="accent" />
+  <text x="1060" y="300" text-anchor="middle" class="title">Shared pipeline</text>
+  <text x="1060" y="324" text-anchor="middle" class="sub">Preview + batch queue</text>
+  <text x="1060" y="344" text-anchor="middle" class="sub">Retry + rename</text>
+
+  <!-- History and output -->
+  <rect x="950" y="398" width="220" height="66" rx="12" class="node" />
+  <text x="1060" y="425" text-anchor="middle" class="title">IndexedDB history</text>
+  <text x="1060" y="447" text-anchor="middle" class="sub">Metadata + blobs, local</text>
+
+  <rect x="950" y="488" width="220" height="66" rx="12" class="node" />
+  <text x="1060" y="515" text-anchor="middle" class="title">Download / ZIP</text>
+  <text x="1060" y="537" text-anchor="middle" class="sub">Back to your device</text>
+
+  <rect x="950" y="578" width="220" height="46" rx="12" fill="#0f1d16" stroke="#22c55e" stroke-width="2" />
+  <text x="1060" y="607" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="18" font-weight="600" fill="#4ade80">Stays on your device</text>
+
+  <path d="M1060 363 V394" class="link" marker-end="url(#arrow)" />
+  <path d="M1060 464 V484" class="link" marker-end="url(#arrow)" />
+  <path d="M1060 554 V574" class="link-green" marker-end="url(#arrow-green)" />
+
+  <text x="30" y="680" class="sub">No upload endpoints. No accounts. No server-side file processing.</text>
+</svg>

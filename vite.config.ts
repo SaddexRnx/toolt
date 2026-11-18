@@ -41,7 +41,18 @@ export default defineConfig(({ command }) => ({
       server: { entry: "server" },
     }),
     // Nitro only builds; the dev server runs on Vite directly.
-    ...(command === "build" ? [nitro({ preset: "cloudflare-module" })] : []),
+    ...(command === "build"
+      ? [
+          nitro({
+            preset: "cloudflare-module",
+            cloudflare: {
+              // Match the Worker that serves tools at
+              // https://toolt.sdxrnx.workers.dev.
+              wrangler: { name: "toolt" },
+            },
+          }),
+        ]
+      : []),
     viteReact(),
   ],
 }));
