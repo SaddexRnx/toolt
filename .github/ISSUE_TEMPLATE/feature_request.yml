@@ -1,0 +1,44 @@
+name: Feature request
+description: Suggest a tool, a format, or an improvement to an existing one.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        To_olT only adds tools that can run in the browser. If the job needs a server or a paid API, it probably does not fit.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do
+      description: Describe the job or the file you are working with, not only the feature name.
+      placeholder: I have a folder of HEIC photos and I want to turn them into one PDF without uploading them.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What should the tool do
+      description: Inputs, outputs and the steps you expect.
+      placeholder: Accept HEIC files, let me reorder them, then export a single PDF.
+    validations:
+      required: true
+  - type: input
+    id: formats
+    attributes:
+      label: Formats involved
+      placeholder: HEIC to PDF
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you use today
+      description: A link or a short note about the workaround you have now.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: This can run entirely in the browser, without a server or a paid API.
+          required: true
+        - label: I checked that this is not already in the catalog.
+          required: true

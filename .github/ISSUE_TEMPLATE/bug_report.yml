@@ -1,0 +1,70 @@
+name: Bug report
+description: Something is broken, gives the wrong result, or does not load.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. Please do not attach private files. A screenshot, the file type and the error message are usually enough.
+  - type: input
+    id: tool
+    attributes:
+      label: Tool or page
+      description: The tool name or the URL where it happened.
+      placeholder: Merge PDFs, or /tools/pdf-merge
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: Describe the error, the wrong output, the blank page, or whatever you saw.
+      placeholder: The conversion finished, but the downloaded PDF was empty.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      placeholder: A single PDF with all pages from the files I added.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: List the clicks and files that lead to the problem, if you can repeat it.
+      placeholder: |
+        1. Open Merge PDFs
+        2. Add two PDFs
+        3. Click Convert
+        4. Download the result
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and operating system
+      placeholder: Chrome 142 on Windows 11
+    validations:
+      required: true
+  - type: input
+    id: file
+    attributes:
+      label: File type and size
+      description: The extension and rough size are enough. Do not link a private file.
+      placeholder: PDF, 12 MB
+  - type: textarea
+    id: console
+    attributes:
+      label: Console errors
+      description: Open the browser console and paste anything red. This is optional but very helpful.
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I checked that this issue is not already reported.
+          required: true
+        - label: I have not attached a private or sensitive file.
+          required: true

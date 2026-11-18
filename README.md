@@ -8,6 +8,7 @@
 
 <p>
   <a href="https://toolt.sdxrnx.workers.dev"><img alt="Live demo" src="https://img.shields.io/badge/live-demo-22c55e?style=for-the-badge&logo=cloudflare&logoColor=white" /></a>
+  <a href="https://github.com/SaddexRnx/toolt/issues/new/choose"><img alt="Report a bug" src="https://img.shields.io/badge/report%20a%20bug-e11d48?style=for-the-badge&logo=github&logoColor=white" /></a>
   <img alt="175 tools" src="https://img.shields.io/badge/tools-175-22c55e?style=for-the-badge" />
   <img alt="100% client-side" src="https://img.shields.io/badge/client--side-100%25-black?style=for-the-badge" />
   <img alt="21 languages" src="https://img.shields.io/badge/languages-21-22c55e?style=for-the-badge" />
@@ -22,19 +23,17 @@
   <img alt="Cloudflare Workers" src="https://img.shields.io/badge/Cloudflare-Workers-F38020?style=flat-square&logo=cloudflare&logoColor=white" />
 </p>
 
-[Live demo](https://toolt.sdxrnx.workers.dev) · [GitHub](https://github.com/SaddexRnx/toolt) · [Why To_olT](#why-to_olt) · [How it compares](#how-it-compares) · [Tool catalog](#tool-catalog) · [Architecture](#architecture) · [Quick start](#quick-start) · [Deploy](#deploy) · [Report a bug](#report-an-issue)
+[Live demo](https://toolt.sdxrnx.workers.dev) · [GitHub](https://github.com/SaddexRnx/toolt) · [All tools](#what-is-inside) · [How it works](#how-it-works) · [Run it locally](#run-it-locally) · [Report a bug](#something-broken)
 
 </div>
 
 ---
 
-> Most "free" online file tools are a front-end for someone else's computer.
-> You upload a document, wait in a queue, and hope the copy is deleted.
-> To_olT does the opposite: **the browser is the computer.**
+I built To_olT because uploading a file just to merge two PDFs never made sense to me.
 
-Drop a PDF, a 4K video, a spreadsheet, a JWT or a whole batch of images. Every byte is processed on your device with WebAssembly and plain JavaScript, then handed straight back to you. Nothing is uploaded anywhere, because there is nowhere to upload it to.
+The browser is a capable computer now. WebAssembly handles video, OCR and PDF work at a speed that needed a server a few years ago, and the File API can read and write files without a round trip. So I put the whole toolbox on one page and removed the server from the path.
 
-There is no file-processing backend to scale, no queue to wait in, no account to create, and no subscription hiding behind a watermark.
+Drop a PDF, a 4K video, a spreadsheet, a token or a folder of images. Every byte is processed on your device and handed straight back. There is no upload endpoint, no storage bucket and no account. When you close the tab, the working copy is gone.
 
 <p align="center">
   <img src="docs/hero.png" alt="To_olT homepage: every file tool, one page, zero uploads" width="100%" />
@@ -46,22 +45,36 @@ There is no file-processing backend to scale, no queue to wait in, no account to
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | **175** | **135** | **40** | **21** | **0** | **0** | **0** |
 
-## Why To_olT
+## What you get
 
-Three ideas drive the whole project.
+The catalog is split into three groups:
 
-**Privacy is an architecture, not a promise.**
-A server-based converter can only promise to delete your file. To_olT never receives it. There is no upload endpoint, no storage bucket, and no queue worker to leak. Close the tab and the working copy is gone.
+- **135 converters** for PDF, images, video, audio, documents, spreadsheets, data, archives and code.
+- **Everyday utilities** for hashing, encoding, formatting, validating, generating QR codes and inspecting files.
+- **40 calculators and builders** for health, math, finance and CSS. They update as you type.
 
-**One toolbox beats twelve tabs.**
-The average PDF task touches three sites: one to merge, one to compress, one to convert. To_olT puts PDF, image, media, document, data and developer tools behind a single `Cmd+K` palette, with one design language, one history, and one batch queue.
+A few parts tie it together:
 
-**Speed should not depend on someone's server.**
-Local work starts immediately. There is no upload bar, no round trip, and no cold container. Even the heavy engines (FFmpeg, Tesseract, background removal) are downloaded once, only when you use them, and then reused from the browser cache.
+- **Smart Drop** looks at the extension and shows every tool that can open it.
+- **Batch mode** queues many files, previews the results, retries failures, renames outputs and exports a ZIP.
+- **History** keeps metadata in `localStorage` and result blobs in IndexedDB, so you can download or re-run an old job.
+- **The command palette** searches all 175 tools with `Cmd+K` or `Ctrl+K`.
+- **21 interface languages**, including Arabic and Hebrew with RTL layout.
+- **Light and dark themes** that are applied before React hydrates, so the page does not flash.
+
+## Why it runs in the browser
+
+Privacy gets the headline, but it is not the only reason.
+
+A server-based converter can promise to delete your file, but you only have its word for it. To_olT never receives the file, so there is nothing to delete and nothing to leak. That is a simpler guarantee.
+
+Local work also starts immediately. There is no upload bar, no queue position and no cold container. The heavy engines (FFmpeg, Tesseract, the background removal model) download once on first use and stay in the browser cache after that.
+
+And one page beats twelve tabs. A typical PDF task touches three sites: one to merge, one to compress, one to convert. Here the tools share one search box, one batch queue, one history and one design.
 
 ## How it compares
 
-The famous tools are good at what they do. They just solve the problem from the other side of the network.
+I put the main alternatives side by side. This is about the processing model and the free-tier experience, not every paid plan. Limits and policies change, so check the provider if it matters to you.
 
 | | **To_olT** | **iLovePDF** | **Smallpdf** | **TinyWow** | **Convertio** | **Adobe Acrobat online** |
 | --- | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -77,14 +90,14 @@ The famous tools are good at what they do. They just solve the problem from the 
 
 <sub>This compares the processing model and typical free-tier experience of each service, not every paid plan. Limits and policies change, so check each provider for current terms.</sub>
 
-### What that means in practice
+### In practice
 
-- **A 400 MB video never crosses your network.** FFmpeg runs as WebAssembly inside the tab, guarded by a per-tool size cap and a single-job limiter so the device stays responsive.
-- **Your PDF is still yours when the tab closes.** No upload means no server-side copy, no retention window, and no "we delete it after 24 hours" footnote.
-- **A plane, a train, or a bad hotel Wi-Fi is not a blocker.** After the first visit the shell is cached by a service worker, and the tools that do not fetch an engine keep working offline.
-- **You can inspect the thing.** The full source, the tool registry, the security headers, and the WASM integrity pins are all in this repository.
+- A 400 MB video stays on your machine. FFmpeg runs as WebAssembly in the tab, with a size cap and a single heavy-job slot so the device stays usable.
+- Your PDF is still yours when the tab closes. No upload means no server-side copy, no retention window and no "we delete it after 24 hours" footnote.
+- A flight or a bad hotel connection is not a blocker. After the first visit the shell is cached by a service worker, and tools that do not fetch an engine keep working offline.
+- You can read the source. The tool registry, security headers and WASM integrity pins are all in this repository.
 
-## Tool catalog
+## What is inside
 
 <table>
 <tr><td width="180"><b>PDF</b></td><td>
@@ -134,24 +147,11 @@ OCR (Tesseract), background removal, high-quality canvas upscaling
 </td></tr>
 </table>
 
-Every tool has a real URL (`/tools/<id>`), its own title, description, canonical link, related tools, and a place in the search palette and sitemap.
+Every tool has its own URL (`/tools/<id>`), a title, a description, a canonical link, related tools, and a place in the palette and sitemap. The pages are generated from one registry, so a tool cannot be in the catalog and missing from search.
 
-## Highlights
+## How it works
 
-- **175 tools, 12 categories.** 135 file converters plus 40 interactive calculators and builders.
-- **Smart Drop.** Drop any file and To_olT detects its type, then lists every tool that can open it.
-- **Command palette.** `Cmd+K` / `Ctrl+K` searches the entire catalog from anywhere.
-- **Batch mode.** Queue dozens of files, preview results, retry failures, rename outputs, and export a ZIP.
-- **Local history.** Metadata in `localStorage`, blobs in IndexedDB. Re-download or re-run a past job.
-- **21 languages**, including Arabic and Hebrew with proper RTL layout.
-- **Light and dark** theme with a solid, high-contrast palette. No gradient soup, no flash on load.
-- **Offline shell.** A versioned service worker caches the app shell and hashed assets after the first visit.
-- **Deep links and SEO.** Per-tool metadata, Open Graph, JSON-LD, sitemap, and `robots.txt`.
-- **Zero telemetry.** No analytics, no accounts, no tracking pixels, no third-party scripts.
-
-## Architecture
-
-The entire app is a static front-end plus a thin SSR shell. Heavy work is isolated behind dynamic imports, so the initial page never pays for an engine it does not use.
+The app is a React front end with a thin SSR shell. The file work happens in the browser. Heavy engines sit behind dynamic imports, so the first page does not download FFmpeg or Tesseract unless you open a tool that needs them.
 
 <p align="center">
   <img src="docs/architecture.svg" alt="To_olT architecture: input flows through the tool registry and engine router to PDF, image, media, vision, document and calculator engines, then through a shared preview and batch pipeline to local history and download." width="100%" />
@@ -170,11 +170,11 @@ The entire app is a static front-end plus a thin SSR shell. Heavy work is isolat
 | Storage | localStorage (metadata), IndexedDB (blobs) |
 | Quality | TypeScript strict mode, ESLint, Prettier |
 
-No API keys. No paid services. No database. No server-side file processing.
+No API keys, no paid services, no database and no server-side file processing.
 
-## Performance by default
+## Performance
 
-Heavy engines are downloaded on first use and cached by the browser. They are never part of the initial payload.
+Heavy engines load on first use and are cached by the browser. They are not part of the initial payload.
 
 | Engine | Approx. size | Loaded when |
 | --- | ---: | --- |
@@ -184,21 +184,21 @@ Heavy engines are downloaded on first use and cached by the browser. They are ne
 | pdf.js worker | ~1 MB | first PDF preview or split |
 | pdf-lib, docx, SheetJS | small | per tool, on demand |
 
-The initial page ships the shell, the typed tool registry, and Tailwind. Everything else waits for a real job.
+The first page loads the shell, the typed tool registry and Tailwind. Everything else waits for a real job.
 
-## Security & privacy
+## Security and privacy
 
-To_olT has no file-processing backend, no database, no accounts, and no telemetry. The attack surface is intentionally small. The client is still hardened where it matters:
+There is no file-processing backend, database, account system or analytics. That keeps the attack surface small. The client is still hardened:
 
-- **Strict response headers.** A Content Security Policy (`default-src 'self'`, `object-src 'none'`, `frame-ancestors 'none'`), `X-Content-Type-Options: nosniff`, `Referrer-Policy`, and a restrictive `Permissions-Policy` on every response.
-- **Pinned WASM integrity.** The FFmpeg core fetched from unpkg is verified against a SHA-384 digest before it reaches the loader, so a compromised CDN cannot inject code.
-- **Abuse guards.** Per-tool file-size caps, a 250 ms conversion cooldown, and a concurrency limiter for the memory-hungry engines.
-- **No code execution paths.** No `eval`, no dynamic `Function()`, no user content passed to `dangerouslySetInnerHTML`.
-- **Local-only storage.** History metadata stays in `localStorage`. Result blobs stay in IndexedDB on your device.
+- A strict Content Security Policy (`default-src 'self'`, `object-src 'none'`, `frame-ancestors 'none'`), `X-Content-Type-Options: nosniff`, `Referrer-Policy` and `Permissions-Policy` on every response.
+- The FFmpeg core from unpkg is checked against a SHA-384 digest before it is loaded, so a compromised CDN cannot swap in code.
+- Per-tool file size caps, a short conversion cooldown and a concurrency limit for memory-hungry engines.
+- No `eval`, no dynamic `Function()` and no user content passed to `dangerouslySetInnerHTML`.
+- History metadata stays in `localStorage`. Result blobs stay in IndexedDB on your device.
 
-The only outbound requests are the optional engine downloads listed above. Everything else is served from the same origin.
+The only outbound requests are the optional engine downloads above. The rest is served from the same origin.
 
-## Quick start
+## Run it locally
 
 ```bash
 git clone https://github.com/SaddexRnx/toolt.git
@@ -218,13 +218,13 @@ Open <http://localhost:8080>.
 | `bun run lint` | ESLint |
 | `bun run format` | Prettier |
 
-> `npm` and `pnpm` work too. The lockfile just happens to be Bun's.
+> `npm` and `pnpm` work too. The lockfile happens to be Bun's.
 
-## Deploy
+## Deploying
 
 The app is live at **<https://toolt.sdxrnx.workers.dev>**, served by the `toolt` Worker on Cloudflare.
 
-Production builds target that origin for canonical links, Open Graph tags, JSON-LD, and the sitemap. To move to a custom domain, set `VITE_SITE_URL` in the build environment and attach the domain to the Worker.
+Production builds use that origin for canonical links, Open Graph tags, JSON-LD and the sitemap. To move to a custom domain, set `VITE_SITE_URL` in the build environment and attach the domain to the Worker.
 
 ```bash
 bun run build
@@ -234,10 +234,10 @@ bunx wrangler deploy
 Preview the production build locally:
 
 ```bash
-bun run preview   # wrangler dev
+bun run preview
 ```
 
-## Project structure
+## Project layout
 
 ```text
 src/
@@ -273,50 +273,56 @@ public/
 └── icons, favicon, og image
 ```
 
-## Engineering notes
+## Notes from building it
 
-A few decisions worth calling out:
+A few decisions that took longer than expected:
 
-- **One registry, every surface.** `src/lib/catalog.ts` derives the homepage cards, per-tool routes, search index, related tools, and sitemap from the same typed data. A tool cannot exist in one place and be missing from another.
-- **The registry is data, not markup.** A converter declares its id, category, accepted extensions, output formats, and a `run` function. The queue, preview, download, and history layers are shared by all 135 families.
-- **Legacy-safe PDF rendering.** pdf.js v6 calls `Uint8Array.prototype.toHex()`, which older browsers lack. A single loader (`src/lib/pdfjs.ts`) uses the legacy build with the polyfill, so the PDF tools work on Chrome 130 and below, Safari before 18.2, and Firefox before 133.
-- **Memory has a budget.** Large jobs are gated by per-tool size caps, a single heavy-engine slot, and a diff matrix cap. A stuck key or a 500 MB file cannot quietly take the tab down.
-- **The theme is applied before React.** A tiny inline script reads the saved preference and sets the `dark` class and `dir` attribute before hydration, eliminating the light flash on first paint.
-- **Offline is deliberate.** Documents are network-first with a cached shell. Hashed assets are cache-first. The cache is versioned so a new deploy does not serve stale JavaScript.
+- **The registry is the app.** `src/lib/catalog.ts` derives the homepage cards, per-tool routes, search index, related tools and sitemap from one typed list. A tool cannot exist on one surface and disappear from another.
+- **The registry is data, not markup.** A converter declares its id, category, accepted extensions, output formats and a `run` function. The queue, preview, download and history layers are shared by all 135 families.
+- **PDF.js needed a legacy build.** pdf.js v6 calls `Uint8Array.prototype.toHex()`, which older browsers lack. One loader (`src/lib/pdfjs.ts`) uses the legacy build with the polyfill, so the PDF tools work on Chrome 130 and below, Safari before 18.2, and Firefox before 133.
+- **Memory is the real limit.** Large jobs are gated by per-tool size caps, a single heavy-engine slot and a diff matrix cap. A stuck key or a 500 MB file cannot quietly take the tab down.
+- **Theme and language are applied before React.** A small inline script reads the saved preference and sets the theme, language and direction before hydration. Non-English visitors do not see a flash of English or a sudden LTR to RTL reflow.
+- **Offline needs a versioned cache.** Documents are network-first with a cached shell. Hashed assets are cache-first. The cache is versioned so a new deploy does not serve stale JavaScript.
 
-## Roadmap
+## Known limitations
 
-- Workflow chaining: feed the output of one tool directly into the next.
-- More document editing: redaction and form filling.
-- A Playwright regression suite with real PDF, image, audio, and spreadsheet fixtures.
-- More accessibility and layout testing across breakpoints.
-- Optional encrypted sync for history (off by default, never required).
+Not everything is finished. These are the ones I know about:
 
-## Report an issue
+- Very large files are limited by the memory of the device, not by an arbitrary server limit. A 2 GB video on an 8 GB laptop will struggle.
+- FFmpeg, OCR language data and the background removal model are large. The first run needs a network connection and some patience.
+- PDF to Word rebuilds the document. It is not a byte-for-byte conversion, and complex layouts can move around.
+- Some conversions are one-way. For example, flattening a PDF into images loses selectable text.
+- The menus and labels are translated into 21 languages. Tool names, descriptions and most fields inside the converter and calculator dialogs are still English.
+- Chrome gets the most testing. Safari and Firefox work, but edge cases show up there first.
 
-Found a bug? A tool that does not work as expected? A typo in the docs? Please let me know.
+If you hit something on this list, an issue is still useful. It helps me decide what to fix next.
 
-The easiest way is to [open an issue on GitHub](https://github.com/SaddexRnx/toolt/issues/new). Try to include:
+## Something broken?
 
-- What you were trying to do (which tool, which file).
-- What happened instead (error message, wrong output, blank page).
-- Your browser and operating system.
-- Steps to reproduce, if you can.
+Open an issue here: **<https://github.com/SaddexRnx/toolt/issues/new/choose>**
 
-Even a short "this tool gave me a broken PDF" is helpful. Screenshots or the input file (if it is not private) make it much easier to track down.
+A short report is enough. This template helps:
 
-If you prefer, you can also start a [discussion](https://github.com/SaddexRnx/toolt/discussions) for feature requests or general questions.
+```text
+Tool or page:
+Browser and OS:
+What I expected:
+What happened:
+Steps to reproduce:
+```
+
+Please do not attach private documents. A screenshot, the file type and the error message usually tell me enough. If you want to suggest a tool or a format, use the feature request template or start a discussion.
 
 ## Contributing
 
-Pull requests are welcome. For anything large, open an issue first so the approach can be discussed before the code lands.
+Pull requests are welcome. For a large change, open an issue first so we can agree on the approach before you spend time on it.
 
-Please keep the project true to its identity:
+A few rules keep the project consistent:
 
-- 100% client-side. No server-side dependencies, no uploads, no hidden APIs.
-- Minimal, monochrome design with the single green accent.
-- Real tools with real tests, not placeholder cards.
-- Accessible markup and keyboard paths for every interactive control.
+- Keep it client-side. No server-side file processing, no uploads and no hidden APIs.
+- Keep the design minimal: monochrome with one green accent.
+- Add real tools with real behavior, not placeholder cards.
+- Make every control reachable by keyboard.
 
 ```bash
 bun install
@@ -326,7 +332,7 @@ bun run build
 
 ## Credits
 
-Built by [Saddek Renane](https://github.com/SaddexRnx) with a deep respect for the open-source projects that make it possible: pdf-lib, pdf.js, SheetJS, FFmpeg, Tesseract, imgly, TanStack, Vite, Tailwind CSS, and shadcn/ui.
+Built by [Saddek Renane](https://github.com/SaddexRnx). The project stands on pdf-lib, pdf.js, SheetJS, FFmpeg, Tesseract, imgly, TanStack, Vite, Tailwind CSS and shadcn/ui.
 
 ## License
 
