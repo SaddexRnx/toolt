@@ -45,6 +45,10 @@ Drop a PDF, a 4K video, a spreadsheet, a token or a folder of images. Every byte
 | :-----: | :-------------: | :---------------: | :-------: | :-----: | :------: | :------: |
 | **175** |     **135**     |      **40**       |  **21**   |  **0**  |  **0**   |  **0**   |
 
+## About
+
+I built To_olT because I was tired of uploading files to sites I didn't trust to delete them. Every tool here runs in the browser, which means there's no server to maintain and nothing of yours to leak. I'm Saddek, a developer in Algeria. You can find more of my work at [saddexrnx.github.io](https://saddexrnx.github.io) or reach me on [Telegram](https://t.me/Saddex_x).
+
 ## What you get
 
 The catalog is split into three groups:
